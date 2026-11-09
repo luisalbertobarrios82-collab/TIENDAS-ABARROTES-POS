@@ -1,5 +1,5 @@
 // Primero intenta la red para recibir actualizaciones; sin conexión usa la copia guardada.
-const CACHE = 'abarroteria-pos-v3';
+const CACHE = 'abarroteria-pos-v4';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icon.svg', 'css/styles.css', 'vendor/zxing.min.js',
   'js/app.js', 'js/core.js', 'js/db.js', 'js/services.js', 'js/ui.js', 'js/cart.js', 'js/catalog.js', 'js/sheets.js', 'js/scanner.js', 'js/sounds.js',
@@ -8,7 +8,7 @@ const FILES = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(FILES.map((file) => new Request(file, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -23,7 +23,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(request)
+    // no-cache evita la copia de hasta 10 minutos que permite GitHub Pages.
+    fetch(request, { cache: 'no-cache' })
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
