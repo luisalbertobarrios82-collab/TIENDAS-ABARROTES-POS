@@ -14,7 +14,8 @@ for (const type of ['pointerdown', 'touchend', 'keydown']) {
   document.addEventListener(type, getContext, { capture: true, passive: true });
 }
 
-function tone(audio, { frequency, delay = 0, duration, volume, wave = 'sine' }) {
+// hold mantiene el volumen esos segundos antes de apagarse.
+function tone(audio, { frequency, delay = 0, duration, volume, wave = 'sine', hold = 0 }) {
   const start = audio.currentTime + delay;
   const oscillator = audio.createOscillator();
   const gain = audio.createGain();
@@ -22,6 +23,7 @@ function tone(audio, { frequency, delay = 0, duration, volume, wave = 'sine' }) 
   oscillator.frequency.value = frequency;
   gain.gain.setValueAtTime(0.0001, start);
   gain.gain.exponentialRampToValueAtTime(volume, start + 0.008);
+  if (hold) gain.gain.setValueAtTime(volume, start + hold);
   gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
   oscillator.connect(gain).connect(audio.destination);
   oscillator.start(start);
@@ -31,7 +33,7 @@ function tone(audio, { frequency, delay = 0, duration, volume, wave = 'sine' }) 
 // Un pitido corto, como el de un lector de caja.
 export function playScan() {
   const audio = getContext();
-  if (audio) tone(audio, { frequency: 1975, duration: 0.09, volume: 0.22, wave: 'triangle' });
+  if (audio) tone(audio, { frequency: 2400, duration: 0.26, hold: 0.18, volume: 0.6, wave: 'square' });
 }
 
 // Timbre de dos notas ascendentes con un brillo suave.
