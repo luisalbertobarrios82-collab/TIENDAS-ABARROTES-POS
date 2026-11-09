@@ -1,6 +1,7 @@
 import { formatQty, html, normalize } from '../core.js';
 import { cart, cartItems, cartQty, cartTotals, clearCart, onCartChange, pruneCart, stepLine } from '../cart.js';
 import { findByCode, loadDemoProducts, state } from '../services.js';
+import { playScan } from '../sounds.js';
 import { checkout, discountSheet, freeAmountSheet, newCodeSheet, pickProduct, quantitySheet } from '../sheets.js';
 import { money, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
@@ -126,6 +127,7 @@ function onSearchEnter(input) {
   const exact = findByCode(code);
   const clear = () => { input.value = ''; filter.text = ''; };
   if (exact) {
+    playScan();
     pickProduct(exact);
     clear();
     renderGrid();
@@ -134,6 +136,7 @@ function onSearchEnter(input) {
   if (/^\d{6,}$/.test(code)) {
     clear();
     renderGrid();
+    playScan();
     newCodeSheet(code, focusSearch);
     return;
   }

@@ -1,6 +1,7 @@
 // Hojas compartidas por Vender y Cámara: cantidad, monto libre, código nuevo y cobro.
 import { centsToInput, formatCode, formatQty, html, isLookupCode, normalize, parseMoney, parseQty } from './core.js';
 import { lookupProduct } from './catalog.js';
+import { playPaid } from './sounds.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
 import { completeSale, createCustomer, linkCode, listCustomers, saveProduct, state, UserError } from './services.js';
 import { bindMargin, catalogCard, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
@@ -310,6 +311,7 @@ export function checkout() {
       const sale = await completeSale({ items: cartItems(), discount: cart.discount, method, received: cents, reference, customerId });
       clearCart();
       close();
+      playPaid();
       saleDone(sale);
     });
   }, { onClose: focusSearch });

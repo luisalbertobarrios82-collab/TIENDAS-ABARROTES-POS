@@ -1,6 +1,7 @@
 import { html } from '../core.js';
 import { cart, cartTotals, addToCart, clearCart, onCartChange, pruneCart } from '../cart.js';
 import { startScanner } from '../scanner.js';
+import { playScan } from '../sounds.js';
 import { findByCode } from '../services.js';
 import { checkout, newCodeSheet, quantitySheet } from '../sheets.js';
 import { money, setHTML, showError } from '../ui.js';
@@ -72,6 +73,7 @@ export function renderScan(root) {
     if (code === last.code && time - last.at < REPEAT_MS) return;
     last = { code, at: time };
     navigator.vibrate?.(40);
+    playScan();
     const product = findByCode(code);
     if (!product) {
       newCodeSheet(code);
