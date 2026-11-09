@@ -339,6 +339,18 @@ export async function createCustomer(name, phone = '') {
 export const creditHistory = async (customerId) => (await getAllByIndex('creditMoves', 'customerId', customerId))
   .sort((a, b) => b.date.localeCompare(a.date));
 
+// Las ventas ya hechas conservan el nombre del cliente en el historial.
+export async function deleteCustomer(customerId) {
+  await tx(['customers', 'creditMoves'], 'readwrite', async ({ customers, creditMoves }) => {
+    const customer = await req(customers.get(customerId));
+    if (!customer) throw new UserError('El cliente ya no existe.');
+    if (customer.balance !== 0) throw new UserError('Solo se puede eliminar un cliente con saldo en $0.');
+    const moves = await req(creditMoves.index('customerId').getAllKeys(customerId));
+    for (const key of moves) await req(creditMoves.delete(key));
+    await req(customers.delete(customerId));
+  });
+}
+
 export async function payCredit(customerId, amount, method) {
   if (method === 'cash' && !state.shift) throw new UserError('Abre la caja para recibir un abono en efectivo.');
   await tx(['customers', 'creditMoves', 'cashMoves'], 'readwrite', async ({ customers, creditMoves, cashMoves }) => {

@@ -1,6 +1,6 @@
 import { html, normalize, parseMoney } from '../core.js';
-import { creditHistory, createCustomer, listCustomers, payCredit, UserError } from '../services.js';
-import { chevron, dateTime, isView, METHODS, money, monogram, onSubmit, openModal, setHTML, showError, toast } from '../ui.js';
+import { creditHistory, createCustomer, deleteCustomer, listCustomers, payCredit, UserError } from '../services.js';
+import { chevron, confirmDialog, dateTime, isView, METHODS, money, monogram, onSubmit, openModal, setHTML, showError, toast } from '../ui.js';
 
 let root;
 let customers = [];
@@ -89,9 +89,27 @@ async function customerSheet(id) {
           `)}
         </div>
       `}
+      ${customer.balance === 0
+        ? html`<button type="button" class="btn btn-plain btn-ghost-danger" data-delete>Eliminar cliente</button>`
+        : html`<p class="hint">Para eliminar este cliente, su saldo debe estar en $0.</p>`}
       <button type="button" class="btn btn-plain" data-close>Cerrar</button>
     </form>
   `, (dialog, close) => {
+    dialog.querySelector('[data-delete]')?.addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title: 'Eliminar cliente',
+        message: `"${customer.name}" y su historial de fiado se borrarán. Las ventas ya registradas se conservan.`,
+        action: 'Eliminar',
+        danger: true,
+      });
+      if (!ok) return;
+      try {
+        await deleteCustomer(id);
+        close();
+        toast('Cliente eliminado');
+        load().catch(showError);
+      } catch (error) { showError(error); }
+    });
     onSubmit(dialog.querySelector('form'), async ({ amount, method }) => {
       const cents = parseMoney(amount);
       if (!cents) throw new UserError('Escribe un monto mayor a cero.');
