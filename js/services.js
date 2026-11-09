@@ -320,6 +320,8 @@ export async function closeShift(counted, note = '') {
   await refreshShift();
 }
 
+export const getShift = (id) => get('shifts', id);
+
 export const closedShifts = async () => (await getAll('shifts'))
   .filter((s) => s.status === 'closed')
   .sort((a, b) => b.openedAt.localeCompare(a.openedAt));

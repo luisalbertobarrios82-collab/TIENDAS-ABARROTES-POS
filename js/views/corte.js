@@ -1,6 +1,6 @@
 import { aggregateSales, formatQty, html, parseMoney } from '../core.js';
-import { addCashMove, closedShifts, closeShift, salesBetween, shiftDetails, state, UserError } from '../services.js';
-import { confirmDialog, dateTime, dayEnd, dayStart, isView, localDate, METHODS, money, onSubmit, openModal, promptOpenShift, setHTML, showError, toast } from '../ui.js';
+import { addCashMove, closedShifts, closeShift, getShift, salesBetween, shiftDetails, state, UserError } from '../services.js';
+import { backLink, chevron, confirmDialog, dateTime, dayEnd, dayStart, isView, localDate, METHODS, money, onSubmit, openModal, promptOpenShift, setHTML, showError, toast } from '../ui.js';
 
 let root;
 const rerender = () => { if (isView('corte')) renderCorte(root); };
@@ -37,12 +37,12 @@ function moveForm(type) {
   });
 }
 
-function hero(report) {
+function hero(report, label = 'Vendido hoy') {
   const total = Object.values(report.byMethod).reduce((a, b) => a + b, 0);
   const active = SERIES.filter((key) => report.byMethod[key] > 0 || key !== 'transfer');
   return html`
     <section class="hero-card">
-      <small>Vendido hoy</small>
+      <small>${label}</small>
       <p class="hero-amount">${money(report.total)}</p>
       <p class="good hero-sub">Ganancia estimada ${money(report.profit)}</p>
       ${total > 0 && html`
@@ -76,11 +76,12 @@ function historySection(history) {
     <section>
       <p class="group-title">CORTES ANTERIORES</p>
       <div class="group">
-        ${history.slice(0, 15).map((s) => html`
-          <div class="row">
+        ${history.map((s) => html`
+          <a class="row row-btn" href="#corte-detalle/${s.id}">
             <span class="row-main"><span class="row-title">${dateTime(s.closedAt)}</span><small>Vendido ${money(s.summary.total)} · contaste ${money(s.counted)}</small></span>
             ${difference(s.difference)}
-          </div>
+            ${chevron}
+          </a>
         `)}
       </div>
     </section>
@@ -166,6 +167,69 @@ async function load() {
       rerender();
     } catch (error) { showError(error); }
   });
+}
+
+async function loadDetail(id) {
+  const shift = await getShift(id);
+  if (!shift || shift.status !== 'closed') {
+    location.hash = '#corte';
+    return;
+  }
+  const { sales, cashMoves } = await shiftDetails(shift);
+  if (!isView('corte-detalle')) return;
+
+  const report = aggregateSales(sales);
+  const { summary, difference: diff } = shift;
+  const cancelledLater = sales.filter((s) => s.cancelledAt && s.cancelledAt > shift.closedAt).length;
+  const day = new Date(shift.openedAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  const diffLabel = diff < 0 ? 'Cuánto faltó' : diff > 0 ? 'Cuánto sobró' : 'Diferencia';
+
+  setHTML(root.querySelector('#detail'), html`
+    <header>
+      <p class="eyebrow">Corte de caja</p>
+      <h1>${day}</h1>
+      <p class="muted">Abrió ${dateTime(shift.openedAt)} · Cerró ${dateTime(shift.closedAt)}</p>
+    </header>
+    ${hero(report, 'Vendido')}
+    <section>
+      <p class="group-title">EFECTIVO EN CAJA</p>
+      <div class="group">
+        <div class="row between"><span>Con cuánto iniciaste</span><strong class="tabular">${money(summary.openingFloat)}</strong></div>
+        <div class="row between"><span>Ventas en efectivo</span><span class="muted tabular">${money(summary.cashSales)}</span></div>
+        ${[...cashMoves].reverse().map((m) => html`
+          <div class="row between"><span>${m.reason}</span><span class="muted tabular">${m.type === 'in' ? '+' : '−'}${money(m.amount)}</span></div>
+        `)}
+        <div class="row between"><span>Debía haber</span><span class="muted tabular">${money(summary.expected)}</span></div>
+        <div class="row between"><span>Cuánto tenías</span><strong class="tabular">${money(shift.counted)}</strong></div>
+        <div class="row between"><strong>${diffLabel}</strong>${difference(diff)}</div>
+      </div>
+      ${shift.note && html`<p class="hint">Nota: ${shift.note}</p>`}
+    </section>
+    <section>
+      <p class="group-title">LO QUE SE VENDIÓ</p>
+      <div class="group">
+        ${report.topProducts.length ? report.topProducts.map((p) => html`
+          <div class="row">
+            <span class="row-main"><span class="row-title">${p.name}</span><small>${formatQty(p.qty)} ${p.unit === 'pza' ? 'pz' : p.unit}</small></span>
+            <strong class="tabular">${money(p.total)}</strong>
+          </div>
+        `) : html`<p class="row muted">No hubo ventas en este corte.</p>`}
+        ${report.topProducts.length > 0 && html`<div class="row between"><strong>Total · ${report.tickets} ${report.tickets === 1 ? 'ticket' : 'tickets'}</strong><strong class="tabular">${money(report.total)}</strong></div>`}
+      </div>
+      ${cancelledLater > 0 && html`<p class="hint">${cancelledLater} ${cancelledLater === 1 ? 'venta se canceló' : 'ventas se cancelaron'} después del cierre y no aparece${cancelledLater === 1 ? '' : 'n'} en esta lista. El efectivo muestra lo que había al cerrar.</p>`}
+    </section>
+  `);
+}
+
+export function renderCorteDetail(container, id) {
+  root = container;
+  setHTML(root, html`
+    <div class="page">
+      <header class="nav-row">${backLink('#corte', 'Corte')}</header>
+      <div id="detail" class="stack-gap"></div>
+    </div>
+  `);
+  loadDetail(id).catch(showError);
 }
 
 export function renderCorte(container) {

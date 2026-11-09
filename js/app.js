@@ -3,7 +3,7 @@ import { showError } from './ui.js';
 import { renderSell } from './views/sell.js';
 import { renderScan } from './views/scan.js';
 import { renderInventory, renderProduct } from './views/inventory.js';
-import { renderCorte } from './views/corte.js';
+import { renderCorte, renderCorteDetail } from './views/corte.js';
 import { renderFiado } from './views/fiado.js';
 import { renderFacturas } from './views/facturas.js';
 import { renderSales } from './views/sales.js';
@@ -16,13 +16,14 @@ const ROUTES = {
   inventario: renderInventory,
   producto: renderProduct,
   corte: renderCorte,
+  'corte-detalle': renderCorteDetail,
   fiado: renderFiado,
   facturas: renderFacturas,
   ventas: renderSales,
   reportes: renderReports,
   ajustes: renderSettings,
 };
-const ACTIVE_TAB = { producto: 'inventario', facturas: 'corte' };
+const ACTIVE_TAB = { producto: 'inventario', facturas: 'corte', 'corte-detalle': 'corte' };
 
 const main = document.getElementById('main');
 let cleanup = null;

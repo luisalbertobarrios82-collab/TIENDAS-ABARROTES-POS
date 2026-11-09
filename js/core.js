@@ -197,7 +197,7 @@ export function aggregateSales(sales) {
       const lineCost = Math.round(line.qty * (line.cost || 0));
       profit += line.net - lineCost;
       const key = line.productId || line.name;
-      const row = products.get(key) || { name: line.name, qty: 0, total: 0 };
+      const row = products.get(key) || { name: line.name, unit: line.unit, qty: 0, total: 0 };
       row.qty = roundQty(row.qty + line.qty);
       row.total += line.total;
       products.set(key, row);
