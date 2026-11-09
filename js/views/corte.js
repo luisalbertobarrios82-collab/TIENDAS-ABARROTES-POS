@@ -57,17 +57,33 @@ function hero(report, label = 'Vendido hoy') {
   `;
 }
 
+const TOP_VISIBLE = 5;
+
 function topSold(report) {
+  const sold = [...report.topProducts].sort((a, b) => b.qty - a.qty || b.total - a.total);
+  const row = (p) => html`
+    <div class="row between"><span>${p.name}</span><span class="muted tabular">${formatQty(p.qty)} ${p.unit === 'pza' ? 'pz' : p.unit}</span></div>
+  `;
+  const hiddenCount = sold.length - TOP_VISIBLE;
   return html`
     <section>
       <p class="group-title">LO MÁS VENDIDO</p>
       <div class="group">
-        ${report.topProducts.length ? [...report.topProducts].sort((a, b) => b.qty - a.qty).slice(0, 5).map((p) => html`
-          <div class="row between"><span>${p.name}</span><span class="muted tabular">${formatQty(p.qty)}</span></div>
-        `) : html`<p class="row muted">Todavía no hay ventas hoy.</p>`}
+        ${sold.length ? sold.slice(0, TOP_VISIBLE).map(row) : html`<p class="row muted">Todavía no hay ventas hoy.</p>`}
+        ${hiddenCount > 0 && html`
+          <div class="more-rows" id="more-sold" hidden>${sold.slice(TOP_VISIBLE).map(row)}</div>
+          <button type="button" class="row row-btn link-row" id="toggle-sold" aria-expanded="false" aria-controls="more-sold" data-count="${hiddenCount}">Ver más (${hiddenCount})</button>
+        `}
       </div>
     </section>
   `;
+}
+
+function toggleSold(button) {
+  const more = root.querySelector('#more-sold');
+  more.hidden = !more.hidden;
+  button.setAttribute('aria-expanded', String(!more.hidden));
+  button.textContent = more.hidden ? `Ver más (${button.dataset.count})` : 'Ver menos';
 }
 
 function historySection(history) {
@@ -243,5 +259,9 @@ export function renderCorte(container) {
       <div id="content" class="stack-gap"></div>
     </div>
   `);
+  root.querySelector('#content').addEventListener('click', (event) => {
+    const button = event.target.closest('#toggle-sold');
+    if (button) toggleSold(button);
+  });
   load().catch(showError);
 }
