@@ -1,9 +1,41 @@
 // Utilidades de interfaz: hojas modales, avisos, ticket y descargas.
-import { computeMargin, formatMoney, formatPercent, formatQty, html, initials, parseMoney, tintIndex } from './core.js';
+import { computeMargin, formatMoney, formatPercent, formatQty, html, initials, MINISUPER_CATEGORIES, parseMoney, tintIndex } from './core.js';
 import { openShift, state, UserError } from './services.js';
 
 export const money = (cents) => formatMoney(cents, state.settings.currency);
 export const moneyFull = (cents) => formatMoney(cents, state.settings.currency, { full: true });
+
+// Lista de categorías: las típicas, las que ya usa la tienda y una opción para escribir otra.
+const OTHER_CATEGORY = '__otra';
+
+export function categoryFieldHtml(current = '') {
+  const names = [...new Set([...MINISUPER_CATEGORIES, ...state.products.map((p) => p.category), ...(current ? [current] : [])])]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  return html`
+    <label class="field">Categoría
+      <select name="categoryChoice">
+        <option value="">Elige una</option>
+        ${names.map((name) => html`<option value="${name}" ${name === current ? html`selected` : ''}>${name}</option>`)}
+        <option value="${OTHER_CATEGORY}">Otra…</option>
+      </select>
+    </label>
+    <label class="field" data-category-other hidden>Escribe la categoría
+      <input name="category" maxlength="40" autocomplete="off">
+    </label>
+  `;
+}
+
+export function bindCategoryField(form) {
+  const other = form.querySelector('[data-category-other]');
+  form.elements.categoryChoice.addEventListener('change', (event) => {
+    other.hidden = event.target.value !== OTHER_CATEGORY;
+    if (!other.hidden) form.elements.category.focus();
+  });
+}
+
+export const readCategory = (values) => (values.categoryChoice === OTHER_CATEGORY
+  ? values.category.trim()
+  : values.categoryChoice) || 'General';
 
 // Texto corto de ganancia por unidad, por ejemplo "+$0.90 · 42.9%".
 export function marginShort(price, cost) {

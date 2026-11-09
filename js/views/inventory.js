@@ -2,7 +2,7 @@ import { centsToInput, computeMargin, daysUntil, EXPIRY_WARNING_DAYS, formatCode
 import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state, unlinkCode, UserError } from '../services.js';
 import { lookupProduct } from '../catalog.js';
 import { bindPhotoPicker, fileToPhoto, photoPickerHtml } from '../photo.js';
-import { backLink, bindMargin, catalogCard, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
+import { backLink, bindCategoryField, bindMargin, catalogCard, categoryFieldHtml, readCategory, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const filter = { text: '', kind: 'all' };
 
@@ -30,7 +30,6 @@ function productSheet(existing, onSaved) {
     name: '', category: '', price: 0, cost: 0, stock: 0, minStock: 0, unit: 'pza',
     taxRate: state.settings.defaultTaxRate, expiry: '', packUnits: 0, barcodes: [],
   };
-  const categories = [...new Set(state.products.map((x) => x.category))];
   openModal(html`
     <form class="modal-body">
       <div class="sheet-head">
@@ -50,10 +49,7 @@ function productSheet(existing, onSaved) {
         <label class="field">Precio <input name="price" inputmode="decimal" required value="${existing ? centsToInput(p.price) : ''}" autocomplete="off"></label>
         <label class="field">Costo <input name="cost" inputmode="decimal" value="${existing ? centsToInput(p.cost) : ''}" autocomplete="off"></label>
         <p class="margin-line" data-margin role="status"></p>
-        <label class="field">Categoría
-          <input name="category" list="category-list" maxlength="40" value="${p.category}" placeholder="General" autocomplete="off">
-          <datalist id="category-list">${categories.map((c) => html`<option value="${c}"></option>`)}</datalist>
-        </label>
+        ${categoryFieldHtml(p.category)}
         <label class="field">Se vende por
           <select name="unit">${UNITS.map((u) => html`<option ${u === p.unit ? html`selected` : ''}>${u}</option>`)}</select>
         </label>
@@ -70,6 +66,7 @@ function productSheet(existing, onSaved) {
   `, (dialog, close) => {
     const form = dialog.querySelector('form');
     const picker = bindPhotoPicker(form, p.image || '');
+    bindCategoryField(form);
     const card = dialog.querySelector('[data-catalog]');
     bindMargin(form);
     // Enter en el código (como hace un lector USB) busca en vez de guardar.
@@ -127,7 +124,7 @@ function productSheet(existing, onSaved) {
         ...(existing ? { id: existing.id } : {}),
         image: picker.value,
         name: values.name.trim(),
-        category: values.category.trim() || 'General',
+        category: readCategory(values),
         price, cost, taxRate, unit: values.unit, minStock, stock, packUnits, expiry: values.expiry,
         barcodes: existing ? existing.barcodes : code ? [{ label: '', code }] : [],
       });

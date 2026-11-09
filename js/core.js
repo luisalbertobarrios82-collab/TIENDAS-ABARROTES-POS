@@ -264,6 +264,13 @@ export function toCSV(rows, textColumns = []) {
 
 export const PRODUCT_CSV_HEADER = ['codigo', 'nombre', 'categoria', 'precio', 'costo', 'existencias', 'minimo', 'unidad', 'iva', 'caducidad', 'piezas_por_caja'];
 export const UNITS = ['pza', 'kg', 'l', 'm'];
+export const MINISUPER_CATEGORIES = [
+  'Abarrotes', 'Aceites y condimentos', 'Aguas y jugos', 'Artículos para bebé', 'Botanas', 'Café, té y azúcar',
+  'Cereales y granos', 'Cervezas, vinos y licores', 'Cigarros', 'Congelados', 'Dulces y chocolates', 'Enlatados y conservas',
+  'Farmacia y botiquín', 'Frutas y verduras', 'Galletas', 'General', 'Higiene personal', 'Lácteos y huevo',
+  'Limpieza del hogar', 'Mascotas', 'Pan y tortillas', 'Papelería', 'Por peso', 'Recargas y servicios',
+  'Refrescos', 'Salchichonería y carnes', 'Sueltos',
+];
 
 export function productToRow(p) {
   return [

@@ -5,7 +5,7 @@ import { bindPhotoPicker, photoPickerHtml } from './photo.js';
 import { playPaid } from './sounds.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
 import { completeSale, createCustomer, linkCode, listCustomers, saveProduct, state, UserError } from './services.js';
-import { bindMargin, catalogCard, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
+import { bindCategoryField, bindMargin, catalogCard, categoryFieldHtml, readCategory, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
 
 function focusSearch() {
   if (matchMedia('(pointer: fine)').matches) document.querySelector('#search')?.focus();
@@ -146,7 +146,7 @@ export function newCodeSheet(code, onClose) {
           <label class="field">Costo <input name="cost" inputmode="decimal" autocomplete="off"></label>
           <p class="margin-line" data-margin role="status"></p>
           <label class="field">Existencias <input name="stock" inputmode="decimal" value="1" autocomplete="off"></label>
-          <label class="field">Categoría <input name="category" maxlength="40" autocomplete="off" placeholder="General"></label>
+          ${categoryFieldHtml()}
         </div>
       </div>
       <button class="btn btn-primary btn-pill" data-submit>Ligar y agregar a la venta</button>
@@ -157,6 +157,7 @@ export function newCodeSheet(code, onClose) {
     const find = dialog.querySelector('[data-find]');
     bindMargin(form);
     const picker = bindPhotoPicker(form);
+    bindCategoryField(form);
 
     const renderOptions = () => {
       const words = normalize(find.value).split(/\s+/).filter(Boolean);
@@ -221,7 +222,7 @@ export function newCodeSheet(code, onClose) {
         if (!values.name.trim()) throw new UserError('Escribe el nombre.');
         if (price === null || cost === null || stock === null) throw new UserError('Revisa el precio, el costo y las existencias.');
         productId = await saveProduct({
-          name: values.name.trim(), category: values.category.trim() || 'General', price, cost, stock, image: picker.value,
+          name: values.name.trim(), category: readCategory(values), price, cost, stock, image: picker.value,
           barcodes: [{ label: '', code }], unit: 'pza', taxRate: state.settings.defaultTaxRate, minStock: 0, expiry: '', packUnits: 0,
         });
       }
