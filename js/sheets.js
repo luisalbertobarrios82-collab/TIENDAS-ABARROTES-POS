@@ -3,7 +3,7 @@ import { centsToInput, formatCode, formatQty, html, isLookupCode, normalize, par
 import { lookupProduct } from './catalog.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
 import { completeSale, createCustomer, linkCode, listCustomers, saveProduct, state, UserError } from './services.js';
-import { catalogCard, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
+import { bindMargin, catalogCard, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
 
 function focusSearch() {
   if (matchMedia('(pointer: fine)').matches) document.querySelector('#search')?.focus();
@@ -142,6 +142,7 @@ export function newCodeSheet(code, onClose) {
         <div class="form-grid">
           <label class="field">Precio <input name="price" inputmode="decimal" autocomplete="off"></label>
           <label class="field">Costo <input name="cost" inputmode="decimal" autocomplete="off"></label>
+          <p class="margin-line" data-margin role="status"></p>
           <label class="field">Existencias <input name="stock" inputmode="decimal" value="1" autocomplete="off"></label>
           <label class="field">Categoría <input name="category" maxlength="40" autocomplete="off" placeholder="General"></label>
         </div>
@@ -152,6 +153,7 @@ export function newCodeSheet(code, onClose) {
     const form = dialog.querySelector('form');
     const options = dialog.querySelector('[data-options]');
     const find = dialog.querySelector('[data-find]');
+    bindMargin(form);
 
     const renderOptions = () => {
       const words = normalize(find.value).split(/\s+/).filter(Boolean);

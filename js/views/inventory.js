@@ -1,7 +1,7 @@
-import { centsToInput, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
+import { centsToInput, computeMargin, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatPercent, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
 import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state, unlinkCode, UserError } from '../services.js';
 import { lookupProduct } from '../catalog.js';
-import { backLink, catalogCard, chevron, confirmDialog, dateTime, isView, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
+import { backLink, bindMargin, catalogCard, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const filter = { text: '', kind: 'all' };
 
@@ -47,6 +47,7 @@ function productSheet(existing, onSaved) {
       <div class="form-grid">
         <label class="field">Precio <input name="price" inputmode="decimal" required value="${existing ? centsToInput(p.price) : ''}" autocomplete="off"></label>
         <label class="field">Costo <input name="cost" inputmode="decimal" value="${existing ? centsToInput(p.cost) : ''}" autocomplete="off"></label>
+        <p class="margin-line" data-margin role="status"></p>
         <label class="field">Categoría
           <input name="category" list="category-list" maxlength="40" value="${p.category}" placeholder="General" autocomplete="off">
           <datalist id="category-list">${categories.map((c) => html`<option value="${c}"></option>`)}</datalist>
@@ -69,6 +70,7 @@ function productSheet(existing, onSaved) {
     let image = '';
     const form = dialog.querySelector('form');
     const card = dialog.querySelector('[data-catalog]');
+    bindMargin(form);
     // Enter en el código (como hace un lector USB) busca en vez de guardar.
     form.elements.code?.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') return;
@@ -149,7 +151,10 @@ function renderList(root) {
         <a class="row row-btn" href="#producto/${p.id}">
           ${thumb(p)}
           <span class="row-main"><span class="row-title">${p.name}</span>${statusOf(p)}</span>
-          <strong class="row-qty">${formatQty(p.stock)} ${p.unit === 'pza' ? 'pz' : p.unit}</strong>
+          <span class="row-end">
+            <strong class="row-qty">${formatQty(p.stock)} ${p.unit === 'pza' ? 'pz' : p.unit}</strong>
+            ${p.cost > 0 && html`<small class="${p.price < p.cost ? 'alert' : 'good'}">${marginShort(p.price, p.cost)}</small>`}
+          </span>
           ${chevron}
         </a>
       `)}
@@ -284,7 +289,7 @@ export function renderProduct(root, id) {
   const p = state.products.find((x) => x.id === id);
   if (!p) { location.hash = '#inventario'; return; }
   const redraw = () => renderProduct(root, id);
-  const profit = p.price - p.cost;
+  const { profit, percent } = computeMargin(p.price, p.cost);
   const days = daysUntil(p.expiry);
 
   setHTML(root, html`
@@ -298,7 +303,7 @@ export function renderProduct(root, id) {
       <div class="triple">
         <div><small>Existencias</small><strong>${formatQty(p.stock)}</strong></div>
         <div><small>Precio</small><strong>${money(p.price)}</strong></div>
-        <div><small>Ganancia</small><strong class="${profit >= 0 ? 'good' : 'alert'}">${money(profit)}</strong></div>
+        <div><small>Ganancia</small><strong class="${profit >= 0 ? 'good' : 'alert'}">${money(profit)}</strong>${percent !== null && html`<small class="${profit >= 0 ? 'good' : 'alert'}">${formatPercent(percent)}</small>`}</div>
       </div>
       <div class="row-gap two-btns">
         <button class="btn btn-primary" id="receive">Recibir mercancía</button>

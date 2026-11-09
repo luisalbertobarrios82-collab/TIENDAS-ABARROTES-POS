@@ -1,9 +1,39 @@
 // Utilidades de interfaz: hojas modales, avisos, ticket y descargas.
-import { formatMoney, formatQty, html, initials, parseMoney, tintIndex } from './core.js';
+import { computeMargin, formatMoney, formatPercent, formatQty, html, initials, parseMoney, tintIndex } from './core.js';
 import { openShift, state, UserError } from './services.js';
 
 export const money = (cents) => formatMoney(cents, state.settings.currency);
 export const moneyFull = (cents) => formatMoney(cents, state.settings.currency, { full: true });
+
+// Texto corto de ganancia por unidad, por ejemplo "+$0.90 · 42.9%".
+export function marginShort(price, cost) {
+  const { profit, percent } = computeMargin(price, cost);
+  return `${profit < 0 ? '−' : '+'}${money(Math.abs(profit))}${percent === null ? '' : ` · ${formatPercent(Math.abs(percent))}`}`;
+}
+
+// Muestra la ganancia en [data-margin] mientras se escriben precio y costo.
+export function bindMargin(form) {
+  const box = form.querySelector('[data-margin]');
+  const update = () => {
+    const price = parseMoney(form.elements.price.value);
+    const costText = form.elements.cost.value.trim();
+    const cost = parseMoney(costText);
+    const ready = price !== null && costText !== '' && cost !== null;
+    const { profit, percent } = ready ? computeMargin(price, cost) : { profit: 0, percent: null };
+    box.classList.toggle('is-gain', ready && profit >= 0);
+    box.classList.toggle('is-loss', ready && profit < 0);
+    if (!ready) {
+      box.textContent = 'Escribe precio y costo para ver cuánto ganas.';
+      return;
+    }
+    const detail = percent === null ? '' : ` (${formatPercent(Math.abs(percent))} sobre el costo)`;
+    box.textContent = `${profit < 0 ? 'Pierdes' : 'Ganas'} ${money(Math.abs(profit))}${detail}`;
+  };
+  form.elements.price.addEventListener('input', update);
+  form.elements.cost.addEventListener('input', update);
+  update();
+}
+
 export const METHODS = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', credit: 'Fiado' };
 
 export const monogram = (name, size = '') => html`<span class="mono-tile ${size} tint-${tintIndex(name)}" aria-hidden="true">${initials(name)}</span>`;

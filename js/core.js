@@ -55,6 +55,16 @@ export function formatMoney(cents, currency = 'MXN', { full = false } = {}) {
   }).format(cents / 100);
 }
 
+// Ganancia por unidad. El porcentaje es sobre el costo; null si no hay costo.
+export function computeMargin(price, cost) {
+  const profit = price - cost;
+  return { profit, percent: cost > 0 ? Math.round((profit / cost) * 1000) / 10 : null };
+}
+
+export function formatPercent(value) {
+  return `${new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 }).format(value)}%`;
+}
+
 export function formatCode(code) {
   return /^\d{13}$/.test(code) ? `${code[0]} ${code.slice(1, 7)} ${code.slice(7)}` : code;
 }

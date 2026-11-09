@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aggregateSales, computeTotals, daysUntil, formatMoney, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow,
+  aggregateSales, computeMargin, computeTotals, daysUntil, formatMoney, formatPercent, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow,
   PRODUCT_CSV_HEADER, resolveDiscount, roundQty, summarizeShift, toCSV,
 } from '../js/core.js';
 
@@ -177,6 +177,14 @@ test('solo se consultan códigos de barras numéricos', () => {
   assert.equal(isLookupCode('7501055300075'), true);
   assert.equal(isLookupCode('123'), false);
   assert.equal(isLookupCode('../../x'), false);
+});
+
+test('la ganancia se calcula en pesos y en porcentaje sobre el costo', () => {
+  assert.deepEqual(computeMargin(300, 210), { profit: 90, percent: 42.9 });
+  assert.deepEqual(computeMargin(1000, 1250), { profit: -250, percent: -20 });
+  assert.deepEqual(computeMargin(500, 0), { profit: 500, percent: null });
+  assert.equal(formatPercent(42.9), '42.9%');
+  assert.equal(formatPercent(30), '30%');
 });
 
 test('html escapa valores y conserva fragmentos anidados', () => {
