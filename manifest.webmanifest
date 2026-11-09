@@ -1,0 +1,12 @@
+{
+  "name": "Abarrotería POS",
+  "short_name": "Abarrotes",
+  "description": "Punto de venta para abarrotes",
+  "lang": "es-MX",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F2F2F7",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

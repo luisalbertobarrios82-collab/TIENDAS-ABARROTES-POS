@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Abarrotería POS</title>
+  <meta name="description" content="Punto de venta para abarrotes: ventas, inventario, corte de caja y fiado. Funciona sin internet.">
+  <meta name="theme-color" content="#F2F2F7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main id="main"></main>
+  <nav class="tabbar" aria-label="Principal">
+    <a href="#vender"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg>Vender</a>
+    <a href="#inventario"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4-9-4Z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>Inventario</a>
+    <a href="#escanear" class="fab" aria-label="Vender con la cámara"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4M7 8v8M11 8v8M14 8v8M17 8v8"/></svg></a>
+    <a href="#corte"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Corte</a>
+    <a href="#fiado"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Fiado</a>
+  </nav>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="print-area"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

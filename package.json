@@ -1,0 +1,10 @@
+{
+  "name": "sistema-pos",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes serve@14.2.4 -l 4173 .",
+    "test": "node --test"
+  }
+}
