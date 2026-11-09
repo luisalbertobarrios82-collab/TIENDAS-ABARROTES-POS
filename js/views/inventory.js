@@ -1,6 +1,7 @@
 import { centsToInput, computeMargin, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatPercent, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
 import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state, unlinkCode, UserError } from '../services.js';
 import { lookupProduct } from '../catalog.js';
+import { bindPhotoPicker, fileToPhoto, photoPickerHtml } from '../photo.js';
 import { backLink, bindMargin, catalogCard, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const filter = { text: '', kind: 'all' };
@@ -37,6 +38,7 @@ function productSheet(existing, onSaved) {
         <h2>${existing ? 'Editar' : 'Producto nuevo'}</h2>
         <button class="link link-strong">Guardar</button>
       </div>
+      ${photoPickerHtml()}
       ${existing ? '' : html`
         <label class="field">Código de barras
           <input name="code" maxlength="40" autocomplete="off" placeholder="Escríbelo o escanéalo para llenar los datos">
@@ -63,12 +65,11 @@ function productSheet(existing, onSaved) {
         <label class="field">Caducidad <input name="expiry" type="date" value="${p.expiry}"></label>
         <label class="field">IVA (%) <input name="taxRate" inputmode="decimal" required value="${p.taxRate}" autocomplete="off"></label>
       </div>
-      ${existing?.image && html`<label class="check"><input type="checkbox" name="removeImage"> Quitar la foto</label>`}
       ${existing && html`<button type="button" class="btn btn-plain btn-ghost-danger" data-delete>Eliminar producto</button>`}
     </form>
   `, (dialog, close) => {
-    let image = '';
     const form = dialog.querySelector('form');
+    const picker = bindPhotoPicker(form, p.image || '');
     const card = dialog.querySelector('[data-catalog]');
     bindMargin(form);
     // Enter en el código (como hace un lector USB) busca en vez de guardar.
@@ -79,7 +80,7 @@ function productSheet(existing, onSaved) {
     });
     form.elements.code?.addEventListener('change', async (event) => {
       const code = event.target.value.trim();
-      image = '';
+      picker.suggest('');
       card.hidden = !isLookupCode(code);
       if (card.hidden) return;
       setHTML(card, html`<small>Buscando el producto…</small>`);
@@ -89,8 +90,8 @@ function productSheet(existing, onSaved) {
         setHTML(card, html`<small>No está en el catálogo. Escribe sus datos.</small>`);
         return;
       }
-      image = found.image;
-      setHTML(card, catalogCard(found));
+      picker.suggest(found.image);
+      setHTML(card, catalogCard({ ...found, image: '' }));
       if (!form.elements.name.value) form.elements.name.value = found.name;
       (form.elements.name.value ? form.elements.price : form.elements.name).focus();
     });
@@ -123,8 +124,8 @@ function productSheet(existing, onSaved) {
       const code = (values.code || '').trim();
 
       const id = await saveProduct({
-        ...(existing ? { id: existing.id } : { image }),
-        ...(values.removeImage ? { image: '' } : {}),
+        ...(existing ? { id: existing.id } : {}),
+        image: picker.value,
         name: values.name.trim(),
         category: values.category.trim() || 'General',
         price, cost, taxRate, unit: values.unit, minStock, stock, packUnits, expiry: values.expiry,
@@ -297,6 +298,7 @@ export function renderProduct(root, id) {
       <header class="nav-row">${backLink('#inventario', 'Inventario')}<button class="link" id="edit">Editar</button></header>
       <div class="product-hero">
         ${thumb(p, 'mono-xl')}
+        <label class="link photo-link">${p.image ? 'Cambiar foto' : 'Agregar foto'}<input id="photo-input" type="file" accept="image/*" class="sr-only"></label>
         <h1>${p.name}</h1>
         <p class="muted">${p.category} · se vende por ${p.unit === 'pza' ? 'pieza' : p.unit}</p>
       </div>
@@ -344,6 +346,16 @@ export function renderProduct(root, id) {
   root.querySelector('#edit').addEventListener('click', () => productSheet(p, redraw));
   root.querySelector('#receive').addEventListener('click', () => receiveSheet(p, redraw));
   root.querySelector('#count').addEventListener('click', () => countSheet(p, redraw));
+  root.querySelector('#photo-input').addEventListener('change', async (event) => {
+    const [file] = event.target.files;
+    event.target.value = '';
+    if (!file) return;
+    try {
+      await saveProduct({ ...p, image: await fileToPhoto(file) });
+      toast('Foto guardada');
+      if (isView('producto')) redraw();
+    } catch (error) { showError(error); }
+  });
   root.querySelector('#add-code').addEventListener('click', () => addCodeSheet(p, redraw));
   root.querySelectorAll('[data-unlink]').forEach((button) => button.addEventListener('click', async () => {
     await unlinkCode(p.id, button.dataset.unlink).catch(showError);

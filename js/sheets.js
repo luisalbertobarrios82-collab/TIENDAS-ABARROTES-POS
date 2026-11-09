@@ -1,6 +1,7 @@
 // Hojas compartidas por Vender y Cámara: cantidad, monto libre, código nuevo y cobro.
 import { centsToInput, formatCode, formatQty, html, isLookupCode, normalize, parseMoney, parseQty } from './core.js';
 import { lookupProduct } from './catalog.js';
+import { bindPhotoPicker, photoPickerHtml } from './photo.js';
 import { playPaid } from './sounds.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
 import { completeSale, createCustomer, linkCode, listCustomers, saveProduct, state, UserError } from './services.js';
@@ -118,7 +119,6 @@ export function discountSheet() {
 export function newCodeSheet(code, onClose) {
   let selected = null;
   let mode = 'link';
-  let image = '';
   openModal(html`
     <form class="modal-body">
       <div class="sheet-head">
@@ -139,6 +139,7 @@ export function newCodeSheet(code, onClose) {
         <p class="hint">El código se cobra al mismo precio y descuenta del mismo inventario.</p>
       </div>
       <div data-mode="new" hidden>
+        ${photoPickerHtml()}
         <label class="field">Nombre <input name="name" maxlength="120" autocomplete="off"></label>
         <div class="form-grid">
           <label class="field">Precio <input name="price" inputmode="decimal" autocomplete="off"></label>
@@ -155,6 +156,7 @@ export function newCodeSheet(code, onClose) {
     const options = dialog.querySelector('[data-options]');
     const find = dialog.querySelector('[data-find]');
     bindMargin(form);
+    const picker = bindPhotoPicker(form);
 
     const renderOptions = () => {
       const words = normalize(find.value).split(/\s+/).filter(Boolean);
@@ -175,6 +177,7 @@ export function newCodeSheet(code, onClose) {
     });
     const applyMode = (value) => {
       mode = value;
+      dialog.querySelector('[data-catalog]')?.classList.toggle('no-photo', mode === 'new');
       dialog.querySelector('[data-mode=link]').hidden = mode !== 'link';
       dialog.querySelector('[data-mode=new]').hidden = mode !== 'new';
       dialog.querySelector('[data-submit]').textContent = mode === 'link' ? 'Ligar y agregar a la venta' : 'Guardar y agregar a la venta';
@@ -195,7 +198,7 @@ export function newCodeSheet(code, onClose) {
           setHTML(card, html`<small>No está en el catálogo. Escribe sus datos o lígalo a un producto.</small>`);
           return;
         }
-        image = found.image;
+        picker.suggest(found.image);
         setHTML(card, catalogCard(found));
         if (!form.elements.name.value) form.elements.name.value = found.name;
         // Si ya eligió qué hacer, no se le cambia la pantalla.
@@ -218,7 +221,7 @@ export function newCodeSheet(code, onClose) {
         if (!values.name.trim()) throw new UserError('Escribe el nombre.');
         if (price === null || cost === null || stock === null) throw new UserError('Revisa el precio, el costo y las existencias.');
         productId = await saveProduct({
-          name: values.name.trim(), category: values.category.trim() || 'General', price, cost, stock, image,
+          name: values.name.trim(), category: values.category.trim() || 'General', price, cost, stock, image: picker.value,
           barcodes: [{ label: '', code }], unit: 'pza', taxRate: state.settings.defaultTaxRate, minStock: 0, expiry: '', packUnits: 0,
         });
       }

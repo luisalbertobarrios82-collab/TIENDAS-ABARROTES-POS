@@ -1,8 +1,8 @@
 // Primero intenta la red para recibir actualizaciones; sin conexión usa la copia guardada.
-const CACHE = 'abarroteria-pos-v4';
+const CACHE = 'abarroteria-pos-v5';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'icon.svg', 'css/styles.css', 'vendor/zxing.min.js',
-  'js/app.js', 'js/core.js', 'js/db.js', 'js/services.js', 'js/ui.js', 'js/cart.js', 'js/catalog.js', 'js/sheets.js', 'js/scanner.js', 'js/sounds.js',
+  'js/app.js', 'js/core.js', 'js/db.js', 'js/services.js', 'js/ui.js', 'js/cart.js', 'js/catalog.js', 'js/sheets.js', 'js/photo.js', 'js/scanner.js', 'js/sounds.js',
   'js/views/sell.js', 'js/views/scan.js', 'js/views/inventory.js', 'js/views/corte.js', 'js/views/fiado.js',
   'js/views/facturas.js', 'js/views/sales.js', 'js/views/reports.js', 'js/views/settings.js',
 ];
