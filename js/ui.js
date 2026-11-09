@@ -7,6 +7,25 @@ export const moneyFull = (cents) => formatMoney(cents, state.settings.currency, 
 export const METHODS = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', credit: 'Fiado' };
 
 export const monogram = (name, size = '') => html`<span class="mono-tile ${size} tint-${tintIndex(name)}" aria-hidden="true">${initials(name)}</span>`;
+export const thumb = (product, size = '') => (product.image
+  ? html`<img class="mono-tile photo ${size}" src="${product.image}" alt="" loading="lazy" data-name="${product.name}">`
+  : monogram(product.name, size));
+
+// Si una foto no carga, se muestran las iniciales.
+document.addEventListener('error', (event) => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || !image.classList.contains('photo')) return;
+  image.outerHTML = String(monogram(image.dataset.name, image.classList.contains('mono-xl') ? 'mono-xl' : ''));
+}, true);
+
+export const catalogCard = (found) => html`
+  ${found.image && html`<img class="catalog-photo" src="${found.image}" alt="">`}
+  <span>
+    <strong>${found.name || 'Encontramos la foto'}</strong>
+    <small>${found.name ? 'Sugerido por Open Food Facts. Revisa que sea correcto.' : 'Falta el nombre: escríbelo abajo.'}</small>
+  </span>
+`;
+
 export const chevron = html`<svg class="chevron" width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m1 1 6 6-6 6"/></svg>`;
 export const backLink = (href, label) => html`<a class="back" href="${href}"><svg width="10" height="18" viewBox="0 0 10 18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 1 1 9l8 8"/></svg>${label}</a>`;
 

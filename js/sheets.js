@@ -1,8 +1,9 @@
 // Hojas compartidas por Vender y Cámara: cantidad, monto libre, código nuevo y cobro.
-import { centsToInput, formatCode, formatQty, html, normalize, parseMoney, parseQty } from './core.js';
+import { centsToInput, formatCode, formatQty, html, isLookupCode, normalize, parseMoney, parseQty } from './core.js';
+import { lookupProduct } from './catalog.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
 import { completeSale, createCustomer, linkCode, listCustomers, saveProduct, state, UserError } from './services.js';
-import { METHODS, money, monogram, onSubmit, openModal, printTicket, promptOpenShift, setHTML, toast } from './ui.js';
+import { catalogCard, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
 
 function focusSearch() {
   if (matchMedia('(pointer: fine)').matches) document.querySelector('#search')?.focus();
@@ -116,6 +117,7 @@ export function discountSheet() {
 export function newCodeSheet(code, onClose) {
   let selected = null;
   let mode = 'link';
+  let image = '';
   openModal(html`
     <form class="modal-body">
       <div class="sheet-head">
@@ -124,6 +126,7 @@ export function newCodeSheet(code, onClose) {
         <button class="link link-strong">Agregar</button>
       </div>
       <p class="code-chip">${formatCode(code)}</p>
+      ${isLookupCode(code) && html`<div class="catalog-card" data-catalog role="status"><small>Buscando el producto…</small></div>`}
       <div class="segmented" role="radiogroup" aria-label="Qué hacer con este código">
         <label><input type="radio" name="mode" value="link" checked><span>Ya lo tengo</span></label>
         <label><input type="radio" name="mode" value="new"><span>Producto nuevo</span></label>
@@ -155,7 +158,7 @@ export function newCodeSheet(code, onClose) {
       const found = state.products.filter((p) => words.every((w) => normalize(p.name).includes(w))).slice(0, 5);
       setHTML(options, found.length ? found.map((p) => html`
         <button type="button" class="row row-btn" data-pick="${p.id}" aria-pressed="${p.id === selected}">
-          ${monogram(p.name)}
+          ${thumb(p)}
           <span class="row-main"><strong>${p.name}</strong><small>${p.barcodes.length} ${p.barcodes.length === 1 ? 'código' : 'códigos'} · ${formatQty(p.stock)} ${p.unit}</small></span>
           ${p.id === selected ? html`<span class="check-mark" aria-hidden="true">✓</span>` : ''}
         </button>
@@ -167,13 +170,38 @@ export function newCodeSheet(code, onClose) {
       const button = event.target.closest('[data-pick]');
       if (button) { selected = button.dataset.pick; renderOptions(); }
     });
-    form.addEventListener('change', (event) => {
-      if (event.target.name !== 'mode') return;
-      mode = event.target.value;
+    const applyMode = (value) => {
+      mode = value;
       dialog.querySelector('[data-mode=link]').hidden = mode !== 'link';
       dialog.querySelector('[data-mode=new]').hidden = mode !== 'new';
       dialog.querySelector('[data-submit]').textContent = mode === 'link' ? 'Ligar y agregar a la venta' : 'Guardar y agregar a la venta';
+    };
+    let touched = false;
+    form.addEventListener('change', (event) => {
+      if (event.target.name !== 'mode') return;
+      touched = true;
+      applyMode(event.target.value);
     });
+    options.addEventListener('click', () => { touched = true; });
+
+    const card = dialog.querySelector('[data-catalog]');
+    if (card) {
+      lookupProduct(code).then((found) => {
+        if (!dialog.isConnected) return;
+        if (!found) {
+          setHTML(card, html`<small>No está en el catálogo. Escribe sus datos o lígalo a un producto.</small>`);
+          return;
+        }
+        image = found.image;
+        setHTML(card, catalogCard(found));
+        if (!form.elements.name.value) form.elements.name.value = found.name;
+        // Si ya eligió qué hacer, no se le cambia la pantalla.
+        if (touched) return;
+        form.elements.mode.value = 'new';
+        applyMode('new');
+        (found.name ? form.elements.price : form.elements.name).focus();
+      });
+    }
 
     onSubmit(form, async (values) => {
       let productId = selected;
@@ -187,7 +215,7 @@ export function newCodeSheet(code, onClose) {
         if (!values.name.trim()) throw new UserError('Escribe el nombre.');
         if (price === null || cost === null || stock === null) throw new UserError('Revisa el precio, el costo y las existencias.');
         productId = await saveProduct({
-          name: values.name.trim(), category: values.category.trim() || 'General', price, cost, stock,
+          name: values.name.trim(), category: values.category.trim() || 'General', price, cost, stock, image,
           barcodes: [{ label: '', code }], unit: 'pza', taxRate: state.settings.defaultTaxRate, minStock: 0, expiry: '', packUnits: 0,
         });
       }

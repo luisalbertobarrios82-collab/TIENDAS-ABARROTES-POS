@@ -2,7 +2,7 @@ import { formatQty, html, normalize } from '../core.js';
 import { cart, cartItems, cartQty, cartTotals, clearCart, onCartChange, pruneCart, stepLine } from '../cart.js';
 import { findByCode, loadDemoProducts, state } from '../services.js';
 import { checkout, discountSheet, freeAmountSheet, newCodeSheet, pickProduct, quantitySheet } from '../sheets.js';
-import { money, monogram, openModal, setHTML, showError, toast } from '../ui.js';
+import { money, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const MAX_TILES = 60;
 const filter = { text: '', category: 'Todos' };
@@ -48,7 +48,7 @@ function renderGrid() {
     const qty = cartQty(p.id);
     return html`
       <button class="tile" data-add="${p.id}" ${out ? html`disabled` : ''}>
-        ${monogram(p.name)}
+        ${thumb(p)}
         <span class="tile-text">
           <span class="tile-name">${shortName(p)}</span>
           <span class="tile-price">${out ? 'Agotado' : `${money(p.price)}${p.unit === 'pza' ? '' : `/${p.unit}`}`}</span>

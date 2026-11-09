@@ -6,7 +6,7 @@ Punto de venta para tiendas de abarrotes. Es una app web sin servidor: se abre d
 
 - **Vender:** búsqueda, lector de códigos USB, productos por peso, monto libre, descuentos y ticket de 80 mm.
 - **Cámara:** escaneo continuo que agrega cada producto al ticket.
-- **Códigos nuevos:** un código desconocido se liga a un producto existente o crea uno nuevo.
+- **Códigos nuevos:** un código desconocido se busca en un catálogo abierto para sugerir nombre y foto. También se puede ligar a un producto que ya exista.
 - **Inventario:** varios códigos por producto, cajas, caducidades, alertas y movimientos.
 - **Corte de caja:** fondo, entradas y salidas, efectivo esperado contra contado.
 - **Fiado:** cuentas por cliente y abonos.
@@ -43,5 +43,7 @@ En el repositorio, ve a **Settings → Pages**, elige **Deploy from a branch**, 
 Columnas: `codigo, nombre, categoria, precio, costo, existencias, minimo, unidad, iva, caducidad, piezas_por_caja`. Solo `nombre` y `precio` son obligatorias. Separa varios códigos con `|` y escribe la caducidad como `AAAA-MM-DD`.
 
 ## Licencias de terceros
+
+Los nombres y fotos sugeridos vienen de [Open Food Facts](https://world.openfoodfacts.org), Open Beauty Facts y Open Products Facts (datos ODbL, fotos CC BY-SA). La app solo les envía el código de barras consultado.
 
 `vendor/zxing.min.js` es [ZXing para JavaScript](https://github.com/zxing-js/library), con licencia MIT (`vendor/zxing-LICENSE.txt`).

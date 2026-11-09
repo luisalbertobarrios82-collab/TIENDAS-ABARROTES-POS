@@ -294,6 +294,31 @@ export function productFromRow(header, row, defaultTaxRate = 16) {
   };
 }
 
+// ---------- Catálogo abierto de productos ----------
+const CATALOG_IMAGE_HOSTS = ['images.openfoodfacts.org', 'images.openbeautyfacts.org', 'images.openproductsfacts.org'];
+
+export const isLookupCode = (code) => /^\d{8,14}$/.test(String(code));
+
+// Convierte la respuesta del catálogo en { name, image }, o null si no sirve.
+export function parseCatalogProduct(json) {
+  if (json?.status !== 1 || !json.product) return null;
+  const p = json.product;
+  const clean = (value) => String(value ?? '').replace(/\s+/g, ' ').trim();
+  // Algunos registros traen como nombre solo el número del código.
+  const base = [p.product_name_es, p.product_name].map(clean).find((value) => /\p{L}/u.test(value)) || '';
+  const parts = [base];
+  for (const extra of [clean(p.brands).split(',')[0].trim(), clean(p.quantity)]) {
+    if (base && extra && !normalize(base).includes(normalize(extra))) parts.push(extra);
+  }
+  let image = '';
+  try {
+    const url = new URL(p.image_small_url);
+    if (url.protocol === 'https:' && CATALOG_IMAGE_HOSTS.includes(url.hostname)) image = url.href;
+  } catch { /* sin foto utilizable */ }
+  if (!base && !image) return null;
+  return { name: parts.join(' ').slice(0, 120), image };
+}
+
 export function normalize(text) {
   return String(text).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }

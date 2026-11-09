@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aggregateSales, computeTotals, daysUntil, formatMoney, html, isValidRFC, parseCSV, parseMoney, parseQty, productFromRow,
+  aggregateSales, computeTotals, daysUntil, formatMoney, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow,
   PRODUCT_CSV_HEADER, resolveDiscount, roundQty, summarizeShift, toCSV,
 } from '../js/core.js';
 
@@ -153,6 +153,30 @@ test('el corte separa las ventas fiadas del efectivo', () => {
   const s = summarizeShift({ openingFloat: 0 }, [{ method: 'credit', total: 500, status: 'completed' }], []);
   assert.equal(s.creditSales, 500);
   assert.equal(s.expected, 0);
+});
+
+test('el catálogo arma el nombre con marca y tamaño sin repetir', () => {
+  const image = 'https://images.openfoodfacts.org/images/products/1/front_es.200.jpg';
+  assert.deepEqual(
+    parseCatalogProduct({ status: 1, product: { product_name_es: 'Pan de molde', brands: 'Bimbo,Grupo', quantity: '620g', image_small_url: image } }),
+    { name: 'Pan de molde Bimbo 620g', image },
+  );
+  assert.equal(parseCatalogProduct({ status: 1, product: { product_name: 'Coca-Cola', brands: 'Coca-Cola', quantity: '355 ml' } }).name, 'Coca-Cola 355 ml');
+});
+
+test('el catálogo descarta nombres numéricos, fotos ajenas y productos vacíos', () => {
+  assert.equal(parseCatalogProduct({ status: 0 }), null);
+  assert.equal(parseCatalogProduct({ status: 1, product: { product_name: '7501030459941' } }), null);
+  const onlyPhoto = parseCatalogProduct({ status: 1, product: { product_name: '7501030459941', brands: 'barcel', image_small_url: 'https://images.openfoodfacts.org/a.jpg' } });
+  assert.equal(onlyPhoto.name, '');
+  assert.equal(parseCatalogProduct({ status: 1, product: { product_name: 'A', image_small_url: 'https://malicioso.example/a.jpg' } }).image, '');
+  assert.equal(parseCatalogProduct({ status: 1, product: { product_name: 'A', image_small_url: 'javascript:alert(1)' } }).image, '');
+});
+
+test('solo se consultan códigos de barras numéricos', () => {
+  assert.equal(isLookupCode('7501055300075'), true);
+  assert.equal(isLookupCode('123'), false);
+  assert.equal(isLookupCode('../../x'), false);
 });
 
 test('html escapa valores y conserva fragmentos anidados', () => {

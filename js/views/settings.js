@@ -71,6 +71,11 @@ export function renderSettings(container) {
       </section>
 
       <section class="group pad">
+        <h2>Catálogo de productos</h2>
+        <p class="muted">Los nombres y fotos sugeridos vienen de <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a> y sus proyectos hermanos, creados por sus colaboradores. Datos con licencia ODbL y fotos con licencia CC BY-SA. Solo se consulta el código de barras.</p>
+      </section>
+
+      <section class="group pad">
         <h2>Borrar todo</h2>
         <p class="muted">Elimina productos, ventas, cortes, fiados y ajustes de este dispositivo.</p>
         <button class="btn btn-ghost-danger" id="wipe">Borrar todos los datos</button>

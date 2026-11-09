@@ -1,6 +1,7 @@
-import { centsToInput, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatQty, html, normalize, parseMoney, parseQty, UNITS } from '../core.js';
+import { centsToInput, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
 import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state, unlinkCode, UserError } from '../services.js';
-import { backLink, chevron, confirmDialog, dateTime, isView, money, monogram, onSubmit, openModal, setHTML, showError, toast } from '../ui.js';
+import { lookupProduct } from '../catalog.js';
+import { backLink, catalogCard, chevron, confirmDialog, dateTime, isView, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const filter = { text: '', kind: 'all' };
 
@@ -36,6 +37,12 @@ function productSheet(existing, onSaved) {
         <h2>${existing ? 'Editar' : 'Producto nuevo'}</h2>
         <button class="link link-strong">Guardar</button>
       </div>
+      ${existing ? '' : html`
+        <label class="field">Código de barras
+          <input name="code" maxlength="40" autocomplete="off" placeholder="Escríbelo o escanéalo para llenar los datos">
+        </label>
+        <div class="catalog-card" data-catalog role="status" hidden></div>
+      `}
       <label class="field">Nombre <input name="name" required maxlength="120" value="${p.name}" autocomplete="off"></label>
       <div class="form-grid">
         <label class="field">Precio <input name="price" inputmode="decimal" required value="${existing ? centsToInput(p.price) : ''}" autocomplete="off"></label>
@@ -49,16 +56,42 @@ function productSheet(existing, onSaved) {
         </label>
         ${existing ? '' : html`
           <label class="field">Existencias <input name="stock" inputmode="decimal" value="0" autocomplete="off"></label>
-          <label class="field">Código de barras <input name="code" maxlength="40" autocomplete="off"></label>
         `}
         <label class="field">Avisar cuando queden <input name="minStock" inputmode="decimal" value="${p.minStock}" autocomplete="off"></label>
         <label class="field">Piezas por caja <input name="packUnits" inputmode="numeric" value="${p.packUnits || ''}" autocomplete="off"></label>
         <label class="field">Caducidad <input name="expiry" type="date" value="${p.expiry}"></label>
         <label class="field">IVA (%) <input name="taxRate" inputmode="decimal" required value="${p.taxRate}" autocomplete="off"></label>
       </div>
+      ${existing?.image && html`<label class="check"><input type="checkbox" name="removeImage"> Quitar la foto</label>`}
       ${existing && html`<button type="button" class="btn btn-plain btn-ghost-danger" data-delete>Eliminar producto</button>`}
     </form>
   `, (dialog, close) => {
+    let image = '';
+    const form = dialog.querySelector('form');
+    const card = dialog.querySelector('[data-catalog]');
+    // Enter en el código (como hace un lector USB) busca en vez de guardar.
+    form.elements.code?.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      event.target.blur();
+    });
+    form.elements.code?.addEventListener('change', async (event) => {
+      const code = event.target.value.trim();
+      image = '';
+      card.hidden = !isLookupCode(code);
+      if (card.hidden) return;
+      setHTML(card, html`<small>Buscando el producto…</small>`);
+      const found = await lookupProduct(code);
+      if (!dialog.isConnected || form.elements.code.value.trim() !== code) return;
+      if (!found) {
+        setHTML(card, html`<small>No está en el catálogo. Escribe sus datos.</small>`);
+        return;
+      }
+      image = found.image;
+      setHTML(card, catalogCard(found));
+      if (!form.elements.name.value) form.elements.name.value = found.name;
+      (form.elements.name.value ? form.elements.price : form.elements.name).focus();
+    });
     dialog.querySelector('[data-delete]')?.addEventListener('click', async () => {
       const ok = await confirmDialog({
         title: 'Eliminar producto',
@@ -72,7 +105,7 @@ function productSheet(existing, onSaved) {
       toast('Producto eliminado');
       location.hash = '#inventario';
     });
-    onSubmit(dialog.querySelector('form'), async (values) => {
+    onSubmit(form, async (values) => {
       const price = parseMoney(values.price);
       if (price === null) throw new UserError('Escribe un precio válido.');
       const cost = values.cost.trim() === '' ? 0 : parseMoney(values.cost);
@@ -88,7 +121,8 @@ function productSheet(existing, onSaved) {
       const code = (values.code || '').trim();
 
       const id = await saveProduct({
-        ...(existing ? { id: existing.id } : {}),
+        ...(existing ? { id: existing.id } : { image }),
+        ...(values.removeImage ? { image: '' } : {}),
         name: values.name.trim(),
         category: values.category.trim() || 'General',
         price, cost, taxRate, unit: values.unit, minStock, stock, packUnits, expiry: values.expiry,
@@ -113,7 +147,7 @@ function renderList(root) {
     <div class="group">
       ${rows.map((p) => html`
         <a class="row row-btn" href="#producto/${p.id}">
-          ${monogram(p.name)}
+          ${thumb(p)}
           <span class="row-main"><span class="row-title">${p.name}</span>${statusOf(p)}</span>
           <strong class="row-qty">${formatQty(p.stock)} ${p.unit === 'pza' ? 'pz' : p.unit}</strong>
           ${chevron}
@@ -257,7 +291,7 @@ export function renderProduct(root, id) {
     <div class="page">
       <header class="nav-row">${backLink('#inventario', 'Inventario')}<button class="link" id="edit">Editar</button></header>
       <div class="product-hero">
-        ${monogram(p.name, 'mono-xl')}
+        ${thumb(p, 'mono-xl')}
         <h1>${p.name}</h1>
         <p class="muted">${p.category} · se vende por ${p.unit === 'pza' ? 'pieza' : p.unit}</p>
       </div>
