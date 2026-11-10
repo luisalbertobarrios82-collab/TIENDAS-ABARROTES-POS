@@ -275,7 +275,7 @@ body[data-view=escanear] .tabbar { display: none; }
 .code-chip { align-self: center; padding: 4px 12px; border-radius: 10px; background: var(--fill); font-variant-numeric: tabular-nums; font-size: 14px; }
 .checkout-label { text-align: center; color: var(--muted); font-weight: 600; font-size: 13px; }
 .checkout-total { text-align: center; font-size: 48px; font-weight: 700; letter-spacing: -1px; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.bills { margin-top: 10px; }
+.bills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 10px; }
 .change { display: flex; justify-content: space-between; align-items: baseline; font-size: 17px; margin-top: 10px; }
 .change strong { font-size: 24px; font-variant-numeric: tabular-nums; }
 .change .is-short { color: var(--red); font-size: 16px; }

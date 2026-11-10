@@ -243,7 +243,7 @@ export function checkout() {
     return;
   }
   const { total } = cartTotals();
-  const bills = [...new Set([total, ...[5000, 10000, 20000, 50000, 100000].filter((b) => b > total)])].slice(0, 4);
+  const bills = [2000, 5000, 10000, 20000, 50000];
 
   openModal(html`
     <form class="modal-body">
@@ -260,7 +260,8 @@ export function checkout() {
           <input name="received" inputmode="decimal" autocomplete="off" value="${centsToInput(total)}">
         </label>
         <div class="row-gap bills">
-          ${bills.map((b) => html`<button type="button" class="chip" data-bill="${b}">${b === total ? 'Exacto' : money(b)}</button>`)}
+          <button type="button" class="chip" data-bill="${total}">Exacto</button>
+          ${bills.map((b) => html`<button type="button" class="chip" data-bill="${b}">${money(b)}</button>`)}
         </div>
         <p class="change"><span>Cambio</span><strong data-change>${money(0)}</strong></p>
       </div>
