@@ -179,11 +179,11 @@ test('solo se consultan códigos de barras numéricos', () => {
   assert.equal(isLookupCode('../../x'), false);
 });
 
-test('la ganancia se calcula en pesos y en porcentaje sobre el costo', () => {
-  assert.deepEqual(computeMargin(300, 210), { profit: 90, percent: 42.9, margin: 30 });
-  assert.deepEqual(computeMargin(1000, 1250), { profit: -250, percent: -20, margin: -25 });
-  assert.deepEqual(computeMargin(500, 0), { profit: 500, percent: null, margin: null });
-  assert.deepEqual(computeMargin(0, 100), { profit: -100, percent: -100, margin: null });
+test('la ganancia se calcula en pesos y el margen sobre el precio de venta', () => {
+  assert.deepEqual(computeMargin(300, 210), { profit: 90, margin: 30 });
+  assert.deepEqual(computeMargin(1000, 1250), { profit: -250, margin: -25 });
+  assert.deepEqual(computeMargin(500, 0), { profit: 500, margin: null });
+  assert.deepEqual(computeMargin(0, 100), { profit: -100, margin: null });
   assert.equal(formatPercent(42.9), '42.9%');
   assert.equal(formatPercent(30), '30%');
 });

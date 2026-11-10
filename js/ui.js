@@ -51,7 +51,7 @@ export function bindMargin(form) {
     const costText = form.elements.cost.value.trim();
     const cost = parseMoney(costText);
     const ready = price !== null && costText !== '' && cost !== null;
-    const { profit, percent, margin } = ready ? computeMargin(price, cost) : { profit: 0, percent: null, margin: null };
+    const { profit, margin } = ready ? computeMargin(price, cost) : { profit: 0, margin: null };
     box.classList.toggle('is-gain', ready && profit >= 0);
     box.classList.toggle('is-loss', ready && profit < 0);
     if (!ready) {
@@ -59,8 +59,7 @@ export function bindMargin(form) {
       return;
     }
     const marginText = margin === null ? '' : ` · Margen ${formatPercent(margin)}`;
-    const costDetail = percent === null ? '' : ` (${formatPercent(Math.abs(percent))} ${profit < 0 ? 'bajo' : 'sobre'} el costo)`;
-    box.textContent = `${profit < 0 ? 'Pierdes' : 'Ganas'} ${money(Math.abs(profit))}${marginText}${costDetail}`;
+    box.textContent = `${profit < 0 ? 'Pierdes' : 'Ganas'} ${money(Math.abs(profit))}${marginText}`;
   };
   form.elements.price.addEventListener('input', update);
   form.elements.cost.addEventListener('input', update);
