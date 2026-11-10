@@ -55,10 +55,12 @@ export function formatMoney(cents, currency = 'MXN', { full = false } = {}) {
   }).format(cents / 100);
 }
 
-// Ganancia por unidad. El porcentaje es sobre el costo; null si no hay costo.
+// Ganancia por unidad. percent es sobre el costo y margin sobre el precio de venta.
+// Ambos son null si falta el dato para calcularlos.
 export function computeMargin(price, cost) {
   const profit = price - cost;
-  return { profit, percent: cost > 0 ? Math.round((profit / cost) * 1000) / 10 : null };
+  const ratio = (base) => (cost > 0 && base > 0 ? Math.round((profit / base) * 1000) / 10 : null);
+  return { profit, percent: ratio(cost), margin: ratio(price) };
 }
 
 export function formatPercent(value) {

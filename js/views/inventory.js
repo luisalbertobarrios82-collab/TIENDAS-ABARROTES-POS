@@ -287,7 +287,7 @@ export function renderProduct(root, id) {
   const p = state.products.find((x) => x.id === id);
   if (!p) { location.hash = '#inventario'; return; }
   const redraw = () => renderProduct(root, id);
-  const { profit, percent } = computeMargin(p.price, p.cost);
+  const { profit, percent, margin } = computeMargin(p.price, p.cost);
   const days = daysUntil(p.expiry);
 
   setHTML(root, html`
@@ -302,7 +302,7 @@ export function renderProduct(root, id) {
       <div class="triple">
         <div><small>Existencias</small><strong>${formatQty(p.stock)}</strong></div>
         <div><small>Precio</small><strong>${money(p.price)}</strong></div>
-        <div><small>Ganancia</small><strong class="${profit >= 0 ? 'good' : 'alert'}">${money(profit)}</strong>${percent !== null && html`<small class="${profit >= 0 ? 'good' : 'alert'}">${formatPercent(percent)}</small>`}</div>
+        <div><small>Ganancia</small><strong class="${profit >= 0 ? 'good' : 'alert'}">${money(profit)}</strong>${margin !== null && html`<small class="${profit >= 0 ? 'good' : 'alert'}">Margen ${formatPercent(margin)}</small>`}${percent !== null && html`<small>${formatPercent(Math.abs(percent))} ${profit < 0 ? 'bajo' : 'sobre'} costo</small>`}</div>
       </div>
       <div class="row-gap two-btns">
         <button class="btn btn-primary" id="receive">Recibir mercancía</button>

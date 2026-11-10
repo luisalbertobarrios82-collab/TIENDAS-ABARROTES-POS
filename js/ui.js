@@ -37,10 +37,10 @@ export const readCategory = (values) => (values.categoryChoice === OTHER_CATEGOR
   ? values.category.trim()
   : values.categoryChoice) || 'General';
 
-// Texto corto de ganancia por unidad, por ejemplo "+$0.90 · 42.9%".
+// Texto corto de ganancia por unidad, por ejemplo "+$0.90 · margen 30%".
 export function marginShort(price, cost) {
-  const { profit, percent } = computeMargin(price, cost);
-  return `${profit < 0 ? '−' : '+'}${money(Math.abs(profit))}${percent === null ? '' : ` · ${formatPercent(Math.abs(percent))}`}`;
+  const { profit, margin } = computeMargin(price, cost);
+  return `${profit < 0 ? '−' : '+'}${money(Math.abs(profit))}${margin === null ? '' : ` · margen ${formatPercent(margin)}`}`;
 }
 
 // Muestra la ganancia en [data-margin] mientras se escriben precio y costo.
@@ -51,15 +51,16 @@ export function bindMargin(form) {
     const costText = form.elements.cost.value.trim();
     const cost = parseMoney(costText);
     const ready = price !== null && costText !== '' && cost !== null;
-    const { profit, percent } = ready ? computeMargin(price, cost) : { profit: 0, percent: null };
+    const { profit, percent, margin } = ready ? computeMargin(price, cost) : { profit: 0, percent: null, margin: null };
     box.classList.toggle('is-gain', ready && profit >= 0);
     box.classList.toggle('is-loss', ready && profit < 0);
     if (!ready) {
       box.textContent = 'Escribe precio y costo para ver cuánto ganas.';
       return;
     }
-    const detail = percent === null ? '' : ` (${formatPercent(Math.abs(percent))} sobre el costo)`;
-    box.textContent = `${profit < 0 ? 'Pierdes' : 'Ganas'} ${money(Math.abs(profit))}${detail}`;
+    const marginText = margin === null ? '' : ` · Margen ${formatPercent(margin)}`;
+    const costDetail = percent === null ? '' : ` (${formatPercent(Math.abs(percent))} ${profit < 0 ? 'bajo' : 'sobre'} el costo)`;
+    box.textContent = `${profit < 0 ? 'Pierdes' : 'Ganas'} ${money(Math.abs(profit))}${marginText}${costDetail}`;
   };
   form.elements.price.addEventListener('input', update);
   form.elements.cost.addEventListener('input', update);
