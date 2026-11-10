@@ -63,6 +63,12 @@ export function computeMargin(price, cost) {
   return { profit, percent: ratio(cost), margin: ratio(price) };
 }
 
+// Costo por pieza a partir del costo de la caja; null si faltan datos.
+export function unitCostFromPack(packCost, units) {
+  if (!packCost || !Number.isInteger(units) || units <= 0) return null;
+  return Math.round(packCost / units);
+}
+
 export function formatPercent(value) {
   return `${new Intl.NumberFormat('es-MX', { maximumFractionDigits: 1 }).format(value)}%`;
 }

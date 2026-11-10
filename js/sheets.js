@@ -5,7 +5,7 @@ import { bindPhotoPicker, photoPickerHtml } from './photo.js';
 import { playPaid } from './sounds.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
 import { completeSale, createCustomer, linkCode, listCustomers, saveProduct, state, UserError } from './services.js';
-import { bindCategoryField, bindMargin, catalogCard, categoryFieldHtml, readCategory, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
+import { bindCategoryField, bindMargin, bindPackCost, catalogCard, categoryFieldHtml, packFieldsHtml, readCategory, METHODS, money, onSubmit, openModal, printTicket, promptOpenShift, setHTML, thumb, toast } from './ui.js';
 
 function focusSearch() {
   if (matchMedia('(pointer: fine)').matches) document.querySelector('#search')?.focus();
@@ -144,6 +144,7 @@ export function newCodeSheet(code, onClose) {
         <div class="form-grid">
           <label class="field">Precio <input name="price" inputmode="decimal" autocomplete="off"></label>
           <label class="field">Costo <input name="cost" inputmode="decimal" autocomplete="off"></label>
+          ${packFieldsHtml()}
           <p class="margin-line" data-margin role="status"></p>
           <label class="field">Existencias <input name="stock" inputmode="decimal" value="1" autocomplete="off"></label>
           ${categoryFieldHtml()}
@@ -158,6 +159,7 @@ export function newCodeSheet(code, onClose) {
     bindMargin(form);
     const picker = bindPhotoPicker(form);
     bindCategoryField(form);
+    bindPackCost(form);
 
     const renderOptions = () => {
       const words = normalize(find.value).split(/\s+/).filter(Boolean);
@@ -221,9 +223,11 @@ export function newCodeSheet(code, onClose) {
         const stock = parseQty(values.stock || '0');
         if (!values.name.trim()) throw new UserError('Escribe el nombre.');
         if (price === null || cost === null || stock === null) throw new UserError('Revisa el precio, el costo y las existencias.');
+        const packUnits = values.packUnits.trim() === '' ? 0 : Number(values.packUnits);
+        if (!Number.isInteger(packUnits) || packUnits < 0) throw new UserError('Las piezas por caja deben ser un número entero.');
         productId = await saveProduct({
           name: values.name.trim(), category: readCategory(values), price, cost, stock, image: picker.value,
-          barcodes: [{ label: '', code }], unit: 'pza', taxRate: state.settings.defaultTaxRate, minStock: 0, expiry: '', packUnits: 0,
+          barcodes: [{ label: '', code }], unit: 'pza', taxRate: state.settings.defaultTaxRate, minStock: 0, expiry: '', packUnits,
         });
       }
       close();

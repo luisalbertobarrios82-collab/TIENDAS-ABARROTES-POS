@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aggregateSales, computeMargin, computeTotals, daysUntil, formatMoney, formatPercent, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow,
+  aggregateSales, computeMargin, computeTotals, daysUntil, formatMoney, formatPercent, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow, unitCostFromPack,
   PRODUCT_CSV_HEADER, resolveDiscount, roundQty, summarizeShift, toCSV,
 } from '../js/core.js';
 
@@ -186,6 +186,15 @@ test('la ganancia se calcula en pesos y en porcentaje sobre el costo', () => {
   assert.deepEqual(computeMargin(0, 100), { profit: -100, percent: -100, margin: null });
   assert.equal(formatPercent(42.9), '42.9%');
   assert.equal(formatPercent(30), '30%');
+});
+
+test('el costo por pieza sale del costo de la caja', () => {
+  assert.equal(unitCostFromPack(23000, 10), 2300);
+  assert.equal(unitCostFromPack(10000, 3), 3333);
+  assert.equal(unitCostFromPack(null, 10), null);
+  assert.equal(unitCostFromPack(0, 10), null);
+  assert.equal(unitCostFromPack(23000, 0), null);
+  assert.equal(unitCostFromPack(23000, 1.5), null);
 });
 
 test('html escapa valores y conserva fragmentos anidados', () => {

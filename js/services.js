@@ -108,11 +108,13 @@ export async function unlinkCode(productId, code) {
   await refreshProducts();
 }
 
-export async function adjustStock(id, delta, reason) {
+// Si se indica newCost, reemplaza el costo por pieza; las ventas pasadas conservan el suyo.
+export async function adjustStock(id, delta, reason, newCost = null) {
   await tx(['products', 'movements'], 'readwrite', async ({ products, movements }) => {
     const product = await req(products.get(id));
     if (!product) throw new UserError('El producto ya no existe.');
     product.stock = roundQty(product.stock + delta);
+    if (newCost !== null) product.cost = newCost;
     await req(products.put(product));
     await req(movements.put(movement(product, delta, reason)));
   });

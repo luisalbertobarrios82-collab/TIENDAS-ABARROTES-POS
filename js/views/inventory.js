@@ -1,8 +1,8 @@
-import { centsToInput, computeMargin, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatPercent, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
+import { unitCostFromPack, centsToInput, computeMargin, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatPercent, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
 import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state, unlinkCode, UserError } from '../services.js';
 import { lookupProduct } from '../catalog.js';
 import { bindPhotoPicker, fileToPhoto, photoPickerHtml } from '../photo.js';
-import { backLink, bindCategoryField, bindMargin, catalogCard, categoryFieldHtml, readCategory, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
+import { backLink, bindCategoryField, bindMargin, bindPackCost, catalogCard, categoryFieldHtml, packFieldsHtml, readCategory, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const filter = { text: '', kind: 'all' };
 
@@ -48,6 +48,7 @@ function productSheet(existing, onSaved) {
       <div class="form-grid">
         <label class="field">Precio <input name="price" inputmode="decimal" required value="${existing ? centsToInput(p.price) : ''}" autocomplete="off"></label>
         <label class="field">Costo <input name="cost" inputmode="decimal" value="${existing ? centsToInput(p.cost) : ''}" autocomplete="off"></label>
+        ${packFieldsHtml(p.packUnits)}
         <p class="margin-line" data-margin role="status"></p>
         ${categoryFieldHtml(p.category)}
         <label class="field">Se vende por
@@ -57,7 +58,6 @@ function productSheet(existing, onSaved) {
           <label class="field">Existencias <input name="stock" inputmode="decimal" value="0" autocomplete="off"></label>
         `}
         <label class="field">Avisar cuando queden <input name="minStock" inputmode="decimal" value="${p.minStock}" autocomplete="off"></label>
-        <label class="field">Piezas por caja <input name="packUnits" inputmode="numeric" value="${p.packUnits || ''}" autocomplete="off"></label>
         <label class="field">Caducidad <input name="expiry" type="date" value="${p.expiry}"></label>
         <label class="field">IVA (%) <input name="taxRate" inputmode="decimal" required value="${p.taxRate}" autocomplete="off"></label>
       </div>
@@ -67,6 +67,7 @@ function productSheet(existing, onSaved) {
     const form = dialog.querySelector('form');
     const picker = bindPhotoPicker(form, p.image || '');
     bindCategoryField(form);
+    bindPackCost(form);
     const card = dialog.querySelector('[data-catalog]');
     bindMargin(form);
     // Enter en el código (como hace un lector USB) busca en vez de guardar.
@@ -236,20 +237,49 @@ function receiveSheet(p, onDone) {
         </div>
       `}
       <label class="field">¿Cuántas llegaron? <input name="qty" inputmode="decimal" required autocomplete="off" autofocus></label>
+      ${hasPack && html`
+        <label class="field" data-pack-cost>¿Cuánto costó cada caja? (opcional)
+          <input name="packCost" inputmode="decimal" autocomplete="off" placeholder="Si cambió, se actualiza el costo">
+        </label>
+        <p class="margin-line" data-pack-preview role="status" hidden></p>
+      `}
       <div class="modal-actions">
         <button type="button" class="btn" data-close>Cancelar</button>
         <button class="btn btn-primary">Recibir</button>
       </div>
     </form>
   `, (dialog, close) => {
-    onSubmit(dialog.querySelector('form'), async ({ qty, by }) => {
+    const form = dialog.querySelector('form');
+    const refreshPreview = () => {
+      const isPack = form.elements.by.value === 'pack';
+      const preview = dialog.querySelector('[data-pack-preview]');
+      dialog.querySelector('[data-pack-cost]').hidden = !isPack;
+      const cost = isPack ? unitCostFromPack(parseMoney(form.elements.packCost.value), p.packUnits) : null;
+      preview.hidden = cost === null;
+      if (cost === null) return;
+      const { profit, margin } = computeMargin(p.price, cost);
+      preview.classList.toggle('is-gain', profit >= 0);
+      preview.classList.toggle('is-loss', profit < 0);
+      const before = cost === p.cost ? '' : ` (antes ${money(p.cost)})`;
+      const marginText = margin === null ? '' : ` · Margen ${formatPercent(margin)}`;
+      preview.textContent = `Cada pieza cuesta ${money(cost)}${before} · ${profit < 0 ? 'Pierdes' : 'Ganas'} ${money(Math.abs(profit))}${marginText}`;
+    };
+    if (hasPack) {
+      form.elements.packCost.addEventListener('input', refreshPreview);
+      form.addEventListener('change', refreshPreview);
+    }
+    onSubmit(form, async ({ qty, by, packCost = '' }) => {
       const value = parseQty(qty);
       if (!value || value < 0) throw new UserError('Escribe una cantidad mayor a cero.');
       const isPack = by === 'pack';
       if ((isPack || p.unit === 'pza') && !Number.isInteger(value)) throw new UserError('Escribe un número entero.');
-      await adjustStock(p.id, isPack ? value * p.packUnits : value, isPack ? `Compra · ${value} ${value === 1 ? 'caja' : 'cajas'}` : 'Compra');
+      const packCents = isPack && packCost.trim() ? parseMoney(packCost) : null;
+      if (isPack && packCost.trim() && !packCents) throw new UserError('Escribe un costo de caja válido.');
+      const newCost = packCents ? unitCostFromPack(packCents, p.packUnits) : null;
+      const reason = isPack ? `Compra · ${value} ${value === 1 ? 'caja' : 'cajas'}${packCents ? ` a ${money(packCents)}` : ''}` : 'Compra';
+      await adjustStock(p.id, isPack ? value * p.packUnits : value, reason, newCost);
       close();
-      toast('Mercancía recibida');
+      toast(newCost !== null && newCost !== p.cost ? `Mercancía recibida. Costo nuevo: ${money(newCost)}` : 'Mercancía recibida');
       onDone();
     });
   });

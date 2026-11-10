@@ -1,5 +1,5 @@
 // Utilidades de interfaz: hojas modales, avisos, ticket y descargas.
-import { computeMargin, formatMoney, formatPercent, formatQty, html, initials, MINISUPER_CATEGORIES, parseMoney, tintIndex } from './core.js';
+import { centsToInput, computeMargin, formatMoney, formatPercent, formatQty, html, initials, MINISUPER_CATEGORIES, parseMoney, tintIndex, unitCostFromPack } from './core.js';
 import { openShift, state, UserError } from './services.js';
 
 export const money = (cents) => formatMoney(cents, state.settings.currency);
@@ -65,6 +65,23 @@ export function bindMargin(form) {
   form.elements.price.addEventListener('input', update);
   form.elements.cost.addEventListener('input', update);
   update();
+}
+
+export const packFieldsHtml = (packUnits = 0) => html`
+  <label class="field">Piezas por caja <input name="packUnits" inputmode="numeric" value="${packUnits || ''}" autocomplete="off"></label>
+  <label class="field">Costo de la caja <input name="packCost" inputmode="decimal" placeholder="Opcional" autocomplete="off"></label>
+`;
+
+// Al escribir el costo de la caja, llena el costo por pieza.
+export function bindPackCost(form) {
+  const update = () => {
+    const cost = unitCostFromPack(parseMoney(form.elements.packCost.value), Number(form.elements.packUnits.value));
+    if (cost === null) return;
+    form.elements.cost.value = centsToInput(cost);
+    form.elements.cost.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  form.elements.packCost.addEventListener('input', update);
+  form.elements.packUnits.addEventListener('input', update);
 }
 
 export const METHODS = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', credit: 'Fiado' };
