@@ -1,6 +1,7 @@
 import { unitCostFromPack, centsToInput, computeMargin, daysUntil, EXPIRY_WARNING_DAYS, formatCode, formatPercent, formatQty, html, isLookupCode, normalize, parseMoney, parseQty, UNITS } from '../core.js';
 import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state, unlinkCode, UserError } from '../services.js';
 import { lookupProduct } from '../catalog.js';
+import { bindNameSuggest, nameSuggestHtml } from '../name-suggest.js';
 import { bindPhotoPicker, fileToPhoto, photoPickerHtml } from '../photo.js';
 import { backLink, bindCategoryField, bindMargin, bindPackCost, catalogCard, categoryFieldHtml, packFieldsHtml, readCategory, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
@@ -45,6 +46,7 @@ function productSheet(existing, onSaved) {
         <div class="catalog-card" data-catalog role="status" hidden></div>
       `}
       <label class="field">Nombre <input name="name" required maxlength="120" value="${p.name}" autocomplete="off"></label>
+      ${existing ? '' : nameSuggestHtml()}
       <div class="form-grid">
         <label class="field">Precio <input name="price" inputmode="decimal" required value="${existing ? centsToInput(p.price) : ''}" autocomplete="off"></label>
         <label class="field">Costo <input name="cost" inputmode="decimal" value="${existing ? centsToInput(p.cost) : ''}" autocomplete="off"></label>
@@ -68,6 +70,7 @@ function productSheet(existing, onSaved) {
     const picker = bindPhotoPicker(form, p.image || '');
     bindCategoryField(form);
     bindPackCost(form);
+    if (!existing) bindNameSuggest(form);
     const card = dialog.querySelector('[data-catalog]');
     bindMargin(form);
     // Enter en el código (como hace un lector USB) busca en vez de guardar.

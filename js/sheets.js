@@ -1,6 +1,7 @@
 // Hojas compartidas por Vender y Cámara: cantidad, monto libre, código nuevo y cobro.
 import { centsToInput, formatCode, formatQty, html, isLookupCode, normalize, parseMoney, parseQty } from './core.js';
 import { lookupProduct } from './catalog.js';
+import { bindNameSuggest, nameSuggestHtml } from './name-suggest.js';
 import { bindPhotoPicker, photoPickerHtml } from './photo.js';
 import { playPaid } from './sounds.js';
 import { addFreeAmount, addToCart, cart, cartItems, cartTotals, clearCart, setDiscount, setLineQty } from './cart.js';
@@ -141,6 +142,7 @@ export function newCodeSheet(code, onClose) {
       <div data-mode="new" hidden>
         ${photoPickerHtml()}
         <label class="field">Nombre <input name="name" maxlength="120" autocomplete="off"></label>
+        ${nameSuggestHtml()}
         <div class="form-grid">
           <label class="field">Precio <input name="price" inputmode="decimal" autocomplete="off"></label>
           <label class="field">Costo <input name="cost" inputmode="decimal" autocomplete="off"></label>
@@ -160,6 +162,7 @@ export function newCodeSheet(code, onClose) {
     const picker = bindPhotoPicker(form);
     bindCategoryField(form);
     bindPackCost(form);
+    bindNameSuggest(form);
 
     const renderOptions = () => {
       const words = normalize(find.value).split(/\s+/).filter(Boolean);

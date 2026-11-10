@@ -100,6 +100,10 @@ body[data-view=escanear] .tabbar { display: none; }
 .margin-line.is-loss { background: #FDECE8; color: var(--red); }
 .row-end { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
 .row-end small { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.name-suggest { display: flex; flex-direction: column; margin-top: 4px; border-radius: 12px; background: var(--surface); overflow: hidden; }
+.name-suggest button { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 44px; padding: 6px 12px; border: 0; background: none; text-align: left; }
+.name-suggest button + button { border-top: .5px solid var(--line); }
+.name-suggest small { flex: none; max-width: 45%; text-align: right; }
 .photo-picker { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
 .photo-actions { display: flex; align-items: center; gap: 12px; }
 .photo-empty { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 10px; background: var(--fill); color: var(--muted); font-size: 11px; font-weight: 600; text-align: center; }

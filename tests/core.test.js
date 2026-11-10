@@ -1,7 +1,8 @@
+import { PRODUCT_NAME_SUGGESTIONS, searchProductNames } from '../js/product-names.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aggregateSales, computeMargin, computeTotals, daysUntil, formatMoney, formatPercent, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow, unitCostFromPack,
+  MINISUPER_CATEGORIES, aggregateSales, computeMargin, computeTotals, daysUntil, formatMoney, formatPercent, html, isLookupCode, isValidRFC, parseCatalogProduct, parseCSV, parseMoney, parseQty, productFromRow, unitCostFromPack,
   PRODUCT_CSV_HEADER, resolveDiscount, roundQty, summarizeShift, toCSV,
 } from '../js/core.js';
 
@@ -195,6 +196,22 @@ test('el costo por pieza sale del costo de la caja', () => {
   assert.equal(unitCostFromPack(0, 10), null);
   assert.equal(unitCostFromPack(23000, 0), null);
   assert.equal(unitCostFromPack(23000, 1.5), null);
+});
+
+test('los nombres sugeridos usan categorías válidas y no se repiten', () => {
+  const names = Object.values(PRODUCT_NAME_SUGGESTIONS).flat();
+  assert.ok(names.length >= 300, `solo hay ${names.length}`);
+  assert.equal(new Set(names).size, names.length);
+  for (const category of Object.keys(PRODUCT_NAME_SUGGESTIONS)) assert.ok(MINISUPER_CATEGORIES.includes(category), category);
+});
+
+test('la búsqueda de nombres ignora acentos y prioriza el inicio', () => {
+  assert.equal(searchProductNames('jabon')[0].name, 'Jabón de barra para ropa');
+  assert.equal(searchProductNames('oaxaca')[0].category, 'Por peso');
+  assert.equal(searchProductNames('leche entera')[0].name, 'Leche entera 1 L');
+  assert.deepEqual(searchProductNames('a'), []);
+  assert.equal(searchProductNames('leche', 3).length, 3);
+  assert.deepEqual(searchProductNames('zzzz'), []);
 });
 
 test('html escapa valores y conserva fragmentos anidados', () => {
