@@ -1,25 +1,9 @@
-import { html, normalize, parseCSV, PRODUCT_CSV_HEADER, productFromRow, productToRow, toCSV } from '../core.js';
-import { exportBackup, importProducts, restoreBackup, saveSettings, state, UserError, wipeAll } from '../services.js';
+import { html, PRODUCT_CSV_HEADER, productToRow, toCSV } from '../core.js';
+import { exportBackup, restoreBackup, saveSettings, state, UserError, wipeAll } from '../services.js';
 import { backLink, confirmDialog, download, localDate, onSubmit, setHTML, showError, toast } from '../ui.js';
 
 const CURRENCIES = ['MXN', 'USD', 'EUR', 'COP', 'PEN', 'CLP', 'ARS', 'GTQ'];
 let root;
-
-async function importFile(file) {
-  const rows = parseCSV(await file.text());
-  if (rows.length < 2) throw new UserError('El archivo no tiene productos.');
-  const header = rows[0].map((h) => normalize(h).trim());
-  if (!header.includes('nombre') || !header.includes('precio')) {
-    throw new UserError('El CSV debe tener al menos las columnas "nombre" y "precio".');
-  }
-  const parsed = rows.slice(1).map((row) => productFromRow(header, row, state.settings.defaultTaxRate));
-  const errors = parsed.map((r, i) => (r.error ? `Fila ${i + 2}: ${r.error}` : null)).filter(Boolean);
-  if (errors.length) {
-    throw new UserError(`No se importó nada. ${errors.slice(0, 3).join('. ')}${errors.length > 3 ? ` y ${errors.length - 3} más` : ''}.`);
-  }
-  const { created, updated } = await importProducts(parsed.map((r) => r.product));
-  toast(`Listo: ${created} nuevos, ${updated} actualizados`);
-}
 
 function exportCSV() {
   const csv = toCSV([PRODUCT_CSV_HEADER, ...state.products.map(productToRow)], [0, 1, 2]);
@@ -54,9 +38,9 @@ export function renderSettings(container) {
 
       <section class="group pad">
         <h2>Lista de productos</h2>
-        <p class="muted">Carga o descarga tu mercancía en un archivo CSV de Excel.</p>
+        <p class="muted">Importa tu mercancía desde Excel o CSV, o descarga la lista en CSV.</p>
         <div class="row-gap">
-          <label class="btn">Importar CSV<input id="import" type="file" accept=".csv,text/csv" class="sr-only"></label>
+          <a class="btn" href="#importar">Importar desde Excel o CSV</a>
           <button class="btn" id="export">Exportar CSV</button>
         </div>
       </section>
@@ -96,11 +80,6 @@ export function renderSettings(container) {
   });
 
   root.querySelector('#export').addEventListener('click', exportCSV);
-  root.querySelector('#import').addEventListener('change', async (event) => {
-    const [file] = event.target.files;
-    event.target.value = '';
-    if (file) await importFile(file).catch(showError);
-  });
 
   root.querySelector('#backup').addEventListener('click', async () => {
     try {

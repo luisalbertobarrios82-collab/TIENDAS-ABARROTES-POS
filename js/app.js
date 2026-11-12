@@ -3,6 +3,7 @@ import { showError } from './ui.js';
 import { renderSell } from './views/sell.js';
 import { renderScan } from './views/scan.js';
 import { renderInventory, renderProduct } from './views/inventory.js';
+import { renderImport } from './views/import.js';
 import { renderCorte, renderCorteDetail } from './views/corte.js';
 import { renderFiado } from './views/fiado.js';
 import { renderFacturas } from './views/facturas.js';
@@ -15,6 +16,7 @@ const ROUTES = {
   escanear: renderScan,
   inventario: renderInventory,
   producto: renderProduct,
+  importar: renderImport,
   corte: renderCorte,
   'corte-detalle': renderCorteDetail,
   fiado: renderFiado,
@@ -23,7 +25,7 @@ const ROUTES = {
   reportes: renderReports,
   ajustes: renderSettings,
 };
-const ACTIVE_TAB = { producto: 'inventario', facturas: 'corte', 'corte-detalle': 'corte' };
+const ACTIVE_TAB = { producto: 'inventario', importar: 'inventario', facturas: 'corte', 'corte-detalle': 'corte' };
 
 const main = document.getElementById('main');
 let cleanup = null;

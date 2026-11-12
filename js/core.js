@@ -244,7 +244,7 @@ export function aggregateSales(sales) {
 }
 
 // ---------- CSV ----------
-export function parseCSV(text) {
+export function parseCSV(text, { keepEmpty = false } = {}) {
   const source = text.replace(/^﻿/, '');
   const firstLine = source.split(/\r?\n/, 1)[0] || '';
   const delimiter = firstLine.includes(';') && !firstLine.includes(',') ? ';' : ',';
@@ -272,7 +272,7 @@ export function parseCSV(text) {
     }
   }
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
-  return rows.filter((r) => r.some((value) => value.trim() !== ''));
+  return keepEmpty ? rows : rows.filter((r) => r.some((value) => value.trim() !== ''));
 }
 
 // Evita que Excel interprete textos como fórmulas al abrir el CSV.

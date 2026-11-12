@@ -233,10 +233,16 @@ export function renderInventory(root) {
         ${stat('low', 'si-red', '↓', low, 'Se acaban')}
         ${stat('expiring', 'si-orange', '!', expiring, 'Caducan')}
       </div>
-      <button type="button" class="link export-link" id="export-xlsx">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>
-        Exportar inventario a Excel
-      </button>
+      <div class="excel-actions">
+        <a class="link export-link" href="#importar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"></path></svg>
+          Importar desde Excel
+        </a>
+        <button type="button" class="link export-link" id="export-xlsx">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>
+          Exportar a Excel
+        </button>
+      </div>
       <div id="list"></div>
     </div>
   `);

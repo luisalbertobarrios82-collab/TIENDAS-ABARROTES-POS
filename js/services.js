@@ -1,5 +1,5 @@
 // Operaciones del negocio. Cada una es atómica: se guarda completa o no se guarda.
-import { computeTotals, formatQty, roundQty, summarizeShift } from './core.js';
+import { computeTotals, formatQty, normalize, roundQty, summarizeShift } from './core.js';
 import { get, getAll, getAllByIndex, put, req, STORES, tx, uid } from './db.js';
 
 export const DEFAULT_SETTINGS = {
@@ -124,31 +124,58 @@ export async function adjustStock(id, delta, reason, newCost = null) {
 export const getMovements = async (productId) => (await getAllByIndex('movements', 'productId', productId))
   .sort((a, b) => b.date.localeCompare(a.date));
 
-export async function importProducts(rows) {
-  const counts = { created: 0, updated: 0 };
+// Cada fila trae solo los campos que venían en el archivo. Un producto que ya existe
+// (mismo código o, si no hay código, mismo nombre) conserva todo lo demás.
+// mode 'upsert' actualiza y agrega; 'new' solo agrega los que no existen.
+export async function importProducts(rows, { mode = 'upsert', reason = 'Importación' } = {}) {
+  const counts = { created: 0, updated: 0, skipped: 0 };
+  const nameKey = (name) => normalize(name).replace(/\s+/g, ' ').trim();
   await tx(['products', 'movements'], 'readwrite', async ({ products, movements }) => {
+    const byName = new Map();
+    for (const p of await req(products.getAll())) if (!byName.has(nameKey(p.name))) byName.set(nameKey(p.name), p);
+
     for (const row of rows) {
-      const incoming = withCodeList(row);
+      const codes = (row.barcodes || []).map((b) => b.code);
       let existing = null;
-      for (const code of incoming.codeList) {
-        existing = existing || await req(products.index('codeList').get(code));
-      }
+      for (const code of codes) existing = existing || await req(products.index('codeList').get(code));
+      if (!existing && !codes.length && row.name) existing = byName.get(nameKey(row.name)) || null;
+
       if (existing) {
-        const delta = roundQty(incoming.stock - existing.stock);
-        const updated = { ...existing, ...incoming, id: existing.id, updatedAt: now() };
+        if (mode === 'new') { counts.skipped += 1; continue; }
+        const barcodes = [...existing.barcodes];
+        for (const b of row.barcodes || []) if (!barcodes.some((x) => x.code === b.code)) barcodes.push(b);
+        const updated = withCodeList({ ...existing, ...row, barcodes, id: existing.id, updatedAt: now() });
         await req(products.put(updated));
-        if (delta !== 0) await req(movements.put(movement(updated, delta, 'Importación CSV')));
+        const delta = 'stock' in row ? roundQty(row.stock - existing.stock) : 0;
+        if (delta !== 0) await req(movements.put(movement(updated, delta, reason)));
+        byName.set(nameKey(updated.name), updated);
         counts.updated += 1;
       } else {
-        const product = { ...incoming, id: uid(), createdAt: now() };
+        const product = withCodeList({
+          category: 'General', cost: 0, stock: 0, minStock: 0, unit: 'pza', taxRate: state.settings.defaultTaxRate,
+          expiry: '', packUnits: 0, barcodes: [], image: '', ...row, id: uid(), createdAt: now(),
+        });
+        await assertCodesFree(products, product.codeList, product.id);
         await req(products.put(product));
-        if (product.stock !== 0) await req(movements.put(movement(product, product.stock, 'Importación CSV')));
+        if (product.stock !== 0) await req(movements.put(movement(product, product.stock, reason)));
+        byName.set(nameKey(product.name), product);
         counts.created += 1;
       }
     }
   });
   await refreshProducts();
   return counts;
+}
+
+const IMPORT_MAPPINGS_KEY = 'importMappings';
+
+export async function getImportMapping(signature) {
+  return (await get('kv', IMPORT_MAPPINGS_KEY))?.value?.[signature] ?? null;
+}
+
+export async function saveImportMapping(signature, mapping) {
+  const stored = (await get('kv', IMPORT_MAPPINGS_KEY))?.value ?? {};
+  await put('kv', { key: IMPORT_MAPPINGS_KEY, value: { ...stored, [signature]: mapping } });
 }
 
 // ---------- Ventas ----------
