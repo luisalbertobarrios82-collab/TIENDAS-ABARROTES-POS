@@ -1,5 +1,5 @@
 import { aggregateSales, formatQty, html, parseMoney } from '../core.js';
-import { addCashMove, closedShifts, closeShift, getShift, salesBetween, shiftDetails, state, UserError } from '../services.js';
+import { addCashMove, closedShifts, closeShift, creditPaymentsBetween, getShift, salesBetween, shiftDetails, state, UserError } from '../services.js';
 import { backLink, chevron, confirmDialog, dateTime, dayEnd, dayStart, isView, localDate, METHODS, money, onSubmit, openModal, promptOpenShift, setHTML, showError, toast } from '../ui.js';
 
 let root;
@@ -86,6 +86,65 @@ function toggleSold(button) {
   button.textContent = more.hidden ? `Ver más (${button.dataset.count})` : 'Ver menos';
 }
 
+const hour = (iso) => new Date(iso).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' });
+
+// Tarjeta, transferencias y fiado: no entran a la caja, pero hay que revisarlos contra la terminal y el banco.
+function otherPayments(sales, payments) {
+  const live = sales.filter((s) => s.status !== 'cancelled');
+  const sold = (method) => live.filter((s) => s.method === method)
+    .map((s) => ({ date: s.date, amount: s.total, title: `Venta #${s.folio}`, note: s.reference, customer: s.customerName }));
+  const paid = (method) => payments.filter((p) => p.method === method)
+    .map((p) => ({ date: p.date, amount: p.amount, title: `Abono de ${p.customerName}` }));
+  const groups = [
+    { key: 'card', label: 'Tarjeta', items: [...sold('card'), ...paid('card')] },
+    { key: 'transfer', label: 'Transferencias', items: [...sold('transfer'), ...paid('transfer')] },
+    { key: 'credit', label: 'Fiado (se debe)', items: sold('credit') },
+  ];
+  const detail = (key, item) => {
+    if (key === 'transfer') return item.note ? `Ref. ${item.note}` : 'Sin referencia';
+    if (key === 'credit') return item.customer || 'Cliente';
+    return '';
+  };
+  return html`
+    <section>
+      <p class="group-title">OTROS PAGOS · NO ENTRAN A LA CAJA</p>
+      <div class="group">
+        ${groups.map(({ key, label, items }) => {
+          const total = items.reduce((sum, item) => sum + item.amount, 0);
+          const count = items.length;
+          if (!count) {
+            return html`<div class="row between"><span><i class="pay-dot s-${key}"></i>${label}</span><span class="muted tabular">${money(0)}</span></div>`;
+          }
+          items.sort((a, b) => b.date.localeCompare(a.date));
+          return html`
+            <button type="button" class="row row-btn between" data-toggle="pay-${key}" aria-expanded="false" aria-controls="pay-${key}">
+              <span class="row-main"><span class="row-title"><i class="pay-dot s-${key}"></i>${label}</span><small>${count} ${count === 1 ? 'pago' : 'pagos'} · Ver detalle</small></span>
+              <strong class="tabular">${money(total)}</strong>
+            </button>
+            <div class="more-rows" id="pay-${key}" hidden>
+              ${items.map((item) => html`
+                <div class="row">
+                  <span class="row-main"><span class="row-title">${item.title}</span><small>${hour(item.date)}${detail(key, item) && ` · ${detail(key, item)}`}</small></span>
+                  <span class="tabular">${money(item.amount)}</span>
+                </div>
+              `)}
+            </div>
+          `;
+        })}
+      </div>
+      <p class="hint">Compara la tarjeta con el reporte de tu terminal y las transferencias con tu banco.</p>
+    </section>
+  `;
+}
+
+function togglePayments(button) {
+  const list = root.querySelector(`#${button.dataset.toggle}`);
+  list.hidden = !list.hidden;
+  button.setAttribute('aria-expanded', String(!list.hidden));
+  const small = button.querySelector('small');
+  small.textContent = small.textContent.replace(list.hidden ? 'Ocultar detalle' : 'Ver detalle', list.hidden ? 'Ver detalle' : 'Ocultar detalle');
+}
+
 function historySection(history) {
   if (!history.length) return '';
   return html`
@@ -106,7 +165,9 @@ function historySection(history) {
 
 async function load() {
   const today = localDate();
-  const [sales, history] = await Promise.all([salesBetween(dayStart(today), dayEnd(today)), closedShifts()]);
+  const [sales, history, payments] = await Promise.all([
+    salesBetween(dayStart(today), dayEnd(today)), closedShifts(), creditPaymentsBetween(dayStart(today), dayEnd(today)),
+  ]);
   if (!isView('corte')) return;
   const report = aggregateSales(sales);
   const content = root.querySelector('#content');
@@ -120,6 +181,7 @@ async function load() {
         <p class="muted">Ábrela para empezar a cobrar.</p>
         <button class="btn btn-primary btn-pill" id="open">Abrir caja</button>
       </section>
+      ${otherPayments(sales, payments)}
       ${topSold(report)}
       <a class="btn btn-pill btn-tinted" href="#facturas">Emitir facturas</a>
       ${historySection(history)}
@@ -151,6 +213,7 @@ async function load() {
         <button class="btn" data-move="out">Sacar efectivo</button>
       </div>
     </section>
+    ${otherPayments(sales, payments)}
     ${topSold(report)}
     <a class="btn btn-pill btn-tinted" href="#facturas">Emitir facturas</a>
     <button class="btn btn-primary btn-pill" id="close">Cerrar el día</button>
@@ -191,7 +254,9 @@ async function loadDetail(id) {
     location.hash = '#corte';
     return;
   }
-  const { sales, cashMoves } = await shiftDetails(shift);
+  const [{ sales, cashMoves }, payments] = await Promise.all([
+    shiftDetails(shift), creditPaymentsBetween(shift.openedAt, shift.closedAt),
+  ]);
   if (!isView('corte-detalle')) return;
 
   const report = aggregateSales(sales);
@@ -221,6 +286,7 @@ async function loadDetail(id) {
       </div>
       ${shift.note && html`<p class="hint">Nota: ${shift.note}</p>`}
     </section>
+    ${otherPayments(sales.filter((s) => !s.cancelledAt || s.cancelledAt > shift.closedAt).map((s) => ({ ...s, status: 'completed' })), payments)}
     <section>
       <p class="group-title">LO QUE SE VENDIÓ</p>
       <div class="group">
@@ -245,6 +311,10 @@ export function renderCorteDetail(container, id) {
       <div id="detail" class="stack-gap"></div>
     </div>
   `);
+  root.querySelector('#detail').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-toggle]');
+    if (button) togglePayments(button);
+  });
   loadDetail(id).catch(showError);
 }
 
@@ -262,6 +332,8 @@ export function renderCorte(container) {
   root.querySelector('#content').addEventListener('click', (event) => {
     const button = event.target.closest('#toggle-sold');
     if (button) toggleSold(button);
+    const pay = event.target.closest('[data-toggle]');
+    if (pay) togglePayments(pay);
   });
   load().catch(showError);
 }

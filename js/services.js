@@ -397,6 +397,16 @@ export async function payCredit(customerId, amount, method) {
   });
 }
 
+// Abonos de fiado cobrados con tarjeta o transferencia entre dos fechas (no pasan por la caja).
+export async function creditPaymentsBetween(from, to) {
+  const [moves, customers] = await Promise.all([getAll('creditMoves'), getAll('customers')]);
+  const names = new Map(customers.map((c) => [c.id, c.name]));
+  return moves
+    .filter((m) => m.type === 'payment' && m.method !== 'cash' && m.date >= from && m.date <= to)
+    .map((m) => ({ ...m, customerName: names.get(m.customerId) || 'Cliente' }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
 // ---------- Facturas (solicitudes por timbrar) ----------
 export const listInvoices = async () => (await getAll('invoices')).sort((a, b) => b.date.localeCompare(a.date));
 
