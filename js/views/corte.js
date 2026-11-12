@@ -137,6 +137,28 @@ function otherPayments(sales, payments) {
   `;
 }
 
+// Ventas a las que se les corrigió la forma de pago: el dueño ve cuántas fueron y por qué.
+function methodChanges(sales) {
+  const changes = sales.filter((s) => s.status !== 'cancelled')
+    .flatMap((s) => (s.methodChanges || []).map((c) => ({ ...c, folio: s.folio, total: s.total })))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!changes.length) return '';
+  const count = new Set(changes.map((c) => c.folio)).size;
+  return html`
+    <section>
+      <p class="group-title">FORMA DE PAGO CAMBIADA · ${count} ${count === 1 ? 'VENTA' : 'VENTAS'}</p>
+      <div class="group">
+        ${changes.map((c) => html`
+          <div class="row">
+            <span class="row-main"><span class="row-title">Venta #${c.folio}: ${METHODS[c.from]} → ${METHODS[c.to]}</span><small>${hour(c.date)} · ${c.reason}</small></span>
+            <span class="tabular">${money(c.total)}</span>
+          </div>
+        `)}
+      </div>
+    </section>
+  `;
+}
+
 function togglePayments(button) {
   const list = root.querySelector(`#${button.dataset.toggle}`);
   list.hidden = !list.hidden;
@@ -182,6 +204,7 @@ async function load() {
         <button class="btn btn-primary btn-pill" id="open">Abrir caja</button>
       </section>
       ${otherPayments(sales, payments)}
+      ${methodChanges(sales)}
       ${topSold(report)}
       <a class="btn btn-pill btn-tinted" href="#facturas">Emitir facturas</a>
       ${historySection(history)}
@@ -214,6 +237,7 @@ async function load() {
       </div>
     </section>
     ${otherPayments(sales, payments)}
+      ${methodChanges(sales)}
     ${topSold(report)}
     <a class="btn btn-pill btn-tinted" href="#facturas">Emitir facturas</a>
     <button class="btn btn-primary btn-pill" id="close">Cerrar el día</button>
@@ -260,6 +284,8 @@ async function loadDetail(id) {
   if (!isView('corte-detalle')) return;
 
   const report = aggregateSales(sales);
+  // Lo que había al cerrar: las ventas canceladas después del corte sí contaron ese día.
+  const atClose = sales.filter((s) => !s.cancelledAt || s.cancelledAt > shift.closedAt).map((s) => ({ ...s, status: 'completed' }));
   const { summary, difference: diff } = shift;
   const cancelledLater = sales.filter((s) => s.cancelledAt && s.cancelledAt > shift.closedAt).length;
   const day = new Date(shift.openedAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -286,7 +312,8 @@ async function loadDetail(id) {
       </div>
       ${shift.note && html`<p class="hint">Nota: ${shift.note}</p>`}
     </section>
-    ${otherPayments(sales.filter((s) => !s.cancelledAt || s.cancelledAt > shift.closedAt).map((s) => ({ ...s, status: 'completed' })), payments)}
+    ${otherPayments(atClose, payments)}
+    ${methodChanges(atClose)}
     <section>
       <p class="group-title">LO QUE SE VENDIÓ</p>
       <div class="group">

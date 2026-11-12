@@ -2,6 +2,9 @@
 import { computeTotals, formatQty, normalize, roundQty, summarizeShift } from './core.js';
 import { get, getAll, getAllByIndex, put, req, STORES, tx, uid } from './db.js';
 
+const METHOD_LABELS = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia', credit: 'Fiado' };
+const METHOD_KEYS = Object.keys(METHOD_LABELS);
+
 export const DEFAULT_SETTINGS = {
   storeName: 'Abarrotes',
   address: '',
@@ -292,6 +295,65 @@ export async function cancelSale(id, reason) {
     await req(sales.put(sale));
   });
   await refreshProducts();
+}
+
+// Corrige la forma de pago de una venta mal registrada. Solo mientras su caja sigue abierta,
+// y queda anotado quién sabe qué se cambió, cuándo y por qué.
+export async function changeSaleMethod(id, { method, reference = '', customerId = null, reason }) {
+  const names = ['sales', 'customers', 'creditMoves', 'kv'];
+  const sale = await tx(names, 'readwrite', async ({ sales, customers, creditMoves, kv }) => {
+    const sale = await req(sales.get(id));
+    if (!sale) throw new UserError('La venta no existe.');
+    if (sale.status === 'cancelled') throw new UserError('Esta venta está cancelada.');
+    if (sale.invoiceId) throw new UserError('Esta venta ya está en una factura y no se puede cambiar.');
+    const openId = (await req(kv.get('openShiftId')))?.value;
+    if (!openId || sale.shiftId !== openId) {
+      throw new UserError('Solo se puede cambiar la forma de pago antes de hacer el corte de esa caja.');
+    }
+    if (!METHOD_KEYS.includes(method)) throw new UserError('Elige una forma de pago.');
+    if (!reason?.trim()) throw new UserError('Escribe por qué se cambia.');
+    const sameCustomer = method !== 'credit' || customerId === sale.customerId;
+    if (method === sale.method && sameCustomer && (method !== 'transfer' || reference === sale.reference)) {
+      throw new UserError('La venta ya tiene esa forma de pago.');
+    }
+    if (method === 'transfer' && !reference.trim()) throw new UserError('Escribe la referencia de la transferencia.');
+    if (method === 'credit' && !customerId) throw new UserError('Elige a quién se le fía.');
+
+    if (sale.method === 'credit' && sale.customerId) {
+      const customer = await req(customers.get(sale.customerId));
+      if (customer) {
+        customer.balance -= sale.total;
+        await req(customers.put(customer));
+        await req(creditMoves.put({
+          id: uid(), customerId: customer.id, type: 'void', amount: sale.total, note: `Venta #${sale.folio} cambiada a ${METHOD_LABELS[method]}`, date: now(),
+        }));
+      }
+    }
+    let customerName = '';
+    if (method === 'credit') {
+      const customer = await req(customers.get(customerId));
+      if (!customer) throw new UserError('El cliente ya no existe.');
+      customer.balance += sale.total;
+      customerName = customer.name;
+      await req(customers.put(customer));
+      await req(creditMoves.put({
+        id: uid(), customerId, type: 'charge', amount: sale.total, note: `Venta #${sale.folio}`, date: now(),
+      }));
+    }
+
+    sale.methodChanges = [...(sale.methodChanges || []), {
+      from: sale.method, to: method, fromReference: sale.reference || '', fromCustomer: sale.customerName || '', reason: reason.trim(), date: now(),
+    }];
+    sale.method = method;
+    sale.reference = method === 'transfer' ? reference.trim() : '';
+    sale.customerId = method === 'credit' ? customerId : null;
+    sale.customerName = customerName;
+    sale.received = method === 'credit' ? 0 : sale.total;
+    sale.change = 0;
+    await req(sales.put(sale));
+    return sale;
+  });
+  return sale;
 }
 
 export const salesBetween = async (from, to) => (await getAllByIndex('sales', 'date', IDBKeyRange.bound(from, to)))
