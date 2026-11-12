@@ -81,12 +81,15 @@ body[data-view=escanear] .tabbar { display: none; }
 .segmented input:checked + span { background: var(--surface); font-weight: 600; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
 .segmented input:focus-visible + span { outline: 2px solid var(--blue); }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 500; color: var(--muted); margin-top: 10px; }
-.field input, .field select { width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--fill); font-size: 16px; font-weight: 400; color: var(--ink); }
+.field input, .field select { width: 100%; min-width: 0; max-width: 100%; height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--fill); font-size: 16px; font-weight: 400; color: var(--ink); }
+/* En iPhone el campo de fecha tiene un ancho mínimo propio y desbordaba la ventana. */
+input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
+input[type=date]::-webkit-date-and-time-value { text-align: left; }
 .field-inline { display: flex; align-items: center; gap: 6px; }
 .field-inline input { height: 38px; padding: 0 8px; border: 0; border-radius: 10px; background: var(--fill); }
 .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .check input { width: 20px; height: 20px; accent-color: var(--blue); }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; }
 .hint { font-size: 12px; font-weight: 500; color: var(--muted); margin: 6px 4px 0; }
 .eyebrow { display: block; font-size: 13px; font-weight: 600; color: var(--muted); text-decoration: none; }
 .title-row { display: flex; align-items: flex-end; justify-content: space-between; flex: none; }
@@ -180,7 +183,7 @@ body[data-view=escanear] .tabbar { display: none; }
 .plus-dot { width: 22px; height: 22px; border-radius: 11px; background: var(--green); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .inline-input { border: 0; background: transparent; text-align: right; color: var(--blue); width: 110px; height: 32px; font-size: 16px; font-variant-numeric: tabular-nums; }
 .inline-input.wide { flex: 1; min-width: 0; width: auto; color: var(--ink); }
-.inline-select { border: 0; background: transparent; text-align: right; color: var(--muted); max-width: 62%; height: 32px; font-size: 14px; }
+.inline-select { border: 0; background: transparent; text-align: right; color: var(--muted); max-width: 62%; height: 32px; font-size: 16px; }
 .two-btns > .btn { flex: 1; }
 .two-btns.under { margin-top: 10px; }
 
@@ -274,7 +277,7 @@ body[data-view=escanear] .tabbar { display: none; }
 .excel-actions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
 .map-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; }
 .map-row + .map-row { border-top: .5px solid var(--line); }
-.map-row select { flex: none; width: 46%; height: 40px; padding: 0 8px; border: 1px solid #D1D1D6; border-radius: 10px; background: var(--surface); font-size: 15px; }
+.map-row select { flex: none; width: 46%; height: 40px; padding: 0 8px; border: 1px solid #D1D1D6; border-radius: 10px; background: var(--surface); font-size: 16px; }
 .file-line { display: flex; align-items: center; gap: 10px; }
 .export-link { align-self: flex-end; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: #0066CC; font-weight: 600; }
 .bar-col:first-child:hover::after, .bar-col:first-child:focus::after { left: 0; transform: none; }
@@ -283,9 +286,9 @@ body[data-view=escanear] .tabbar { display: none; }
 .chart-table summary { cursor: pointer; color: var(--blue); font-size: 14px; padding: 4px 0; }
 
 /* Hojas */
-.modal { border: 0; padding: 0; width: 100%; max-width: 460px; max-height: 92dvh; margin: auto auto 0; border-radius: 22px 22px 0 0; background: var(--bg); color: var(--ink); overflow-y: auto; }
+.modal { border: 0; padding: 0; width: 100%; max-width: 460px; max-height: 92dvh; margin: auto auto 0; border-radius: 22px 22px 0 0; background: var(--bg); color: var(--ink); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .modal::backdrop { background: rgba(0, 0, 0, .4); }
-.modal-body { padding: 10px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.modal-body { min-width: 0; padding: 10px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
 .modal-body::before { content: ""; align-self: center; width: 36px; height: 5px; border-radius: 3px; background: #C7C7CC; margin-bottom: 4px; }
 .modal-body h2 { margin: 0; font-size: 20px; font-weight: 700; }
 .modal-body .field { margin-top: 2px; }
