@@ -85,6 +85,8 @@ body[data-view=escanear] .tabbar { display: none; }
 /* En iPhone el campo de fecha tiene un ancho mínimo propio y desbordaba la ventana. */
 input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
 input[type=date]::-webkit-date-and-time-value { text-align: left; }
+.field-head { display: flex; justify-content: space-between; align-items: center; min-height: 20px; }
+.field-head .link { min-height: 20px; padding: 0 2px; font-size: 13px; font-weight: 600; }
 .field-inline { display: flex; align-items: center; gap: 6px; }
 .field-inline input { height: 38px; padding: 0 8px; border: 0; border-radius: 10px; background: var(--fill); }
 .check { display: flex; align-items: center; gap: 8px; margin-top: 12px; }

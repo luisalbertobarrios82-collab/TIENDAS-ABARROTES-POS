@@ -27,6 +27,25 @@ function statusOf(p) {
   return html`<small>${codes}${p.packUnits ? ` · caja de ${p.packUnits}` : ''}</small>`;
 }
 
+// La fecha se pone por código y no con el atributo value: así el botón "Restablecer"
+// del calendario del iPhone deja el campo vacío en lugar de volver a la fecha guardada.
+function bindExpiryField(form, initial) {
+  const input = form.elements.expiry;
+  const clear = form.querySelector('[data-clear-expiry]');
+  input.value = initial || '';
+  const sync = () => {
+    clear.hidden = !input.value;
+    if (!input.value && document.activeElement === input) input.blur();
+  };
+  input.addEventListener('input', sync);
+  input.addEventListener('change', sync);
+  clear.addEventListener('click', () => {
+    input.value = '';
+    sync();
+  });
+  sync();
+}
+
 function productSheet(existing, onSaved) {
   const p = existing || {
     name: '', category: '', price: 0, cost: 0, stock: 0, minStock: 0, unit: 'pza',
@@ -61,7 +80,13 @@ function productSheet(existing, onSaved) {
           <label class="field">Existencias <input name="stock" inputmode="decimal" value="0" autocomplete="off"></label>
         `}
         <label class="field">Avisar cuando queden <input name="minStock" inputmode="decimal" value="${p.minStock}" autocomplete="off"></label>
-        <label class="field">Caducidad <input name="expiry" type="date" value="${p.expiry}"></label>
+        <div class="field">
+          <span class="field-head">
+            <label for="expiry-input">Caducidad</label>
+            <button type="button" class="link link-danger" data-clear-expiry hidden>Quitar</button>
+          </span>
+          <input id="expiry-input" name="expiry" type="date">
+        </div>
         <label class="field">IVA (%) <input name="taxRate" inputmode="decimal" required value="${p.taxRate}" autocomplete="off"></label>
       </div>
       ${existing && html`<button type="button" class="btn btn-plain btn-ghost-danger" data-delete>Eliminar producto</button>`}
@@ -72,6 +97,7 @@ function productSheet(existing, onSaved) {
     bindCategoryField(form);
     bindPackCost(form);
     if (!existing) bindNameSuggest(form);
+    bindExpiryField(form, p.expiry);
     const card = dialog.querySelector('[data-catalog]');
     bindMargin(form);
     // Enter en el código (como hace un lector USB) busca en vez de guardar.
