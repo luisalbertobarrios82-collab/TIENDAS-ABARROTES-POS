@@ -1,15 +1,24 @@
-import { formatQty, html } from '../core.js';
+import { formatQty, html, saleMatches } from '../core.js';
 import { cancelSale, changeSaleMethod, getSale, listCustomers, salesBetween, state } from '../services.js';
 import { backLink, dateTime, dayEnd, dayStart, isView, localDate, METHODS, money, onSubmit, openModal, printTicket, setHTML, showError, toast } from '../ui.js';
 
 let range = { from: localDate(), to: localDate() };
+let query = '';
+let loaded = [];
 let root;
 
 async function load() {
-  const sales = await salesBetween(dayStart(range.from), dayEnd(range.to));
+  loaded = await salesBetween(dayStart(range.from), dayEnd(range.to));
   if (!isView('ventas')) return;
+  show();
+}
+
+function show() {
+  const sales = loaded.filter((s) => saleMatches(s, query));
   const active = sales.filter((s) => s.status !== 'cancelled');
-  root.querySelector('#summary').textContent = `${active.length} ${active.length === 1 ? 'venta' : 'ventas'} · ${money(active.reduce((a, s) => a + s.total, 0))}`;
+  const found = query.trim() ? ` de ${loaded.length}` : '';
+  root.querySelector('#summary').textContent = `${active.length} ${active.length === 1 ? 'venta' : 'ventas'}${found} · ${money(active.reduce((a, s) => a + s.total, 0))}`;
+  const empty = query.trim() ? 'Ninguna venta coincide con la búsqueda en estas fechas.' : 'No hay ventas en este periodo.';
   setHTML(root.querySelector('#table'), sales.length ? html`
     <table class="table table-click">
       <thead><tr><th>Folio</th><th>Fecha</th><th class="num">Artículos</th><th>Pago</th><th>Estado</th><th class="num">Total</th></tr></thead>
@@ -26,7 +35,7 @@ async function load() {
         `)}
       </tbody>
     </table>
-  ` : html`<p class="empty muted">No hay ventas en este periodo.</p>`);
+  ` : html`<p class="empty muted">${empty}</p>`);
 }
 
 function cancelForm(sale, onDone) {
@@ -152,6 +161,10 @@ export function renderSales(container) {
         <label class="field-inline">Desde <input type="date" id="from" value="${range.from}"></label>
         <label class="field-inline">Hasta <input type="date" id="to" value="${range.to}"></label>
       </div>
+      <div class="search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6C6C70" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="query" type="search" placeholder="Folio, total, producto, hora, referencia…" aria-label="Buscar ventas" value="${query}" autocomplete="off">
+      </div>
       <div id="table"></div>
     </div>
   `);
@@ -162,6 +175,10 @@ export function renderSales(container) {
   };
   root.querySelector('#from').addEventListener('change', update('from'));
   root.querySelector('#to').addEventListener('change', update('to'));
+  root.querySelector('#query').addEventListener('input', (event) => {
+    query = event.target.value;
+    show();
+  });
 
   const table = root.querySelector('#table');
   table.addEventListener('click', (event) => {

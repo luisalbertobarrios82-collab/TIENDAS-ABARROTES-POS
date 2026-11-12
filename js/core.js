@@ -365,3 +365,34 @@ export function parseCatalogProduct(json) {
 export function normalize(text) {
   return String(text).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
+
+// Búsqueda de ventas: #folio, total ($87 o 87), producto, referencia de transferencia o cliente de fiado.
+export function saleMatches(sale, query) {
+  const q = String(query ?? '').trim();
+  if (!q) return true;
+  const folio = q.match(/^#\s*(\d+)$/);
+  if (folio) return sale.folio === Number(folio[1]);
+  // Hora: "3:15", "15:15", "3:15 pm", "3 pm" o "3:" (toda esa hora). Sin am/pm vale para las 3 y las 15.
+  const time = normalize(q).replace(/\./g, '').match(/^(\d{1,2})(?::(\d{2})?|\s*(am|pm))\s*(am|pm)?$/);
+  if (time) {
+    const hour = Number(time[1]);
+    const minute = time[2] === undefined ? null : Number(time[2]);
+    const half = time[3] || time[4];
+    if (hour > 23 || minute > 59 || (half && (hour < 1 || hour > 12))) return false;
+    const hours = half ? [(hour % 12) + (half === 'pm' ? 12 : 0)] : hour === 12 ? [0, 12] : hour < 12 ? [hour, hour + 12] : [hour];
+    const date = new Date(sale.date);
+    return hours.includes(date.getHours()) && (minute === null || date.getMinutes() === minute);
+  }
+  if (/^\d+$/.test(q) && sale.folio === Number(q)) return true;
+  const cents = parseMoney(q);
+  if (cents !== null && sale.total === cents) return true;
+  const needle = normalize(q);
+  const compact = needle.replace(/\s+/g, '');
+  const reference = normalize(sale.reference || '');
+  if (compact.length >= 3 && reference.replace(/\s+/g, '').includes(compact)) return true;
+  // Un número solo es folio, total o referencia: no se busca dentro de los nombres ("1" saldría en "Coca 1 L").
+  if (/^[$\d.,\s]+$/.test(q)) return false;
+  const texts = [...(sale.lines || []).map((line) => line.name), sale.customerName || ''].map(normalize);
+  const words = needle.split(/\s+/).filter(Boolean);
+  return texts.some((text) => words.every((word) => text.includes(word)));
+}

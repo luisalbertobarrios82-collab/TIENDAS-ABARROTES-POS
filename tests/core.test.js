@@ -250,3 +250,36 @@ test('html escapa valores y conserva fragmentos anidados', () => {
   const inner = html`<b>${'<x>'}</b>`;
   assert.equal(String(html`<p>${inner}${['"', null, false]}</p>`), '<p><b>&lt;x&gt;</b>&quot;</p>');
 });
+
+test('busca ventas por folio, total, producto, referencia y cliente', async () => {
+  const { saleMatches } = await import('../js/core.js');
+  const sale = { folio: 12, total: 8700, lines: [{ name: 'Leche Lala 1 L' }, { name: 'Coca-Cola 600 ml' }], reference: 'SPEI 482913', customerName: 'Doña Rosa' };
+  assert.equal(saleMatches(sale, ''), true);
+  assert.equal(saleMatches(sale, '#12'), true);
+  assert.equal(saleMatches(sale, '#87'), false);
+  assert.equal(saleMatches(sale, '12'), true);
+  assert.equal(saleMatches(sale, '$87'), true);
+  assert.equal(saleMatches(sale, '87.00'), true);
+  assert.equal(saleMatches(sale, '88'), false);
+  assert.equal(saleMatches(sale, 'leche'), true);
+  assert.equal(saleMatches(sale, 'COCA'), true);
+  assert.equal(saleMatches(sale, '482913'), true);
+  assert.equal(saleMatches(sale, 'spei482913'), true);
+  assert.equal(saleMatches(sale, 'dona rosa'), true);
+  assert.equal(saleMatches(sale, 'pan'), false);
+  assert.equal(saleMatches(sale, '600'), false);
+  assert.equal(saleMatches(sale, 'coca 600'), true);
+  const at = (h, m) => ({ ...sale, date: new Date(2026, 10, 12, h, m).toISOString() });
+  assert.equal(saleMatches(at(15, 15), '3:15'), true);
+  assert.equal(saleMatches(at(3, 15), '3:15'), true);
+  assert.equal(saleMatches(at(15, 15), '15:15'), true);
+  assert.equal(saleMatches(at(15, 15), '3:15 pm'), true);
+  assert.equal(saleMatches(at(15, 15), '3:15 a.m.'), false);
+  assert.equal(saleMatches(at(15, 40), '3 pm'), true);
+  assert.equal(saleMatches(at(15, 40), '3:'), true);
+  assert.equal(saleMatches(at(16, 0), '3:'), false);
+  assert.equal(saleMatches(at(12, 5), '12 pm'), true);
+  assert.equal(saleMatches(at(0, 5), '12 am'), true);
+  assert.equal(saleMatches(at(0, 42), '12:'), true);
+  assert.equal(saleMatches(at(12, 42), '12:42'), true);
+});
