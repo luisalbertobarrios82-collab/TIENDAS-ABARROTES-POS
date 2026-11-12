@@ -1,5 +1,7 @@
 // Lectura de códigos con la cámara. Usa BarcodeDetector si el navegador lo trae;
 // si no (iPhone, Chrome de escritorio), carga la copia local de ZXing.
+// 640x480 y unas 4 lecturas por segundo bastan para códigos de barras y calientan menos el teléfono.
+const SCAN_INTERVAL_MS = 250;
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf'];
 
 function loadZXing() {
@@ -24,7 +26,7 @@ async function nativeDetector() {
 export async function startScanner(video, onCode) {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
   });
   let stopped = false;
   let stopReader = () => {};
@@ -40,7 +42,7 @@ export async function startScanner(video, onCode) {
           const [found] = await detector.detect(video);
           if (found?.rawValue) onCode(found.rawValue);
         } catch { /* cuadro no disponible: se reintenta */ }
-        setTimeout(loop, 120);
+        setTimeout(loop, SCAN_INTERVAL_MS);
       };
       loop();
     } else {
@@ -49,7 +51,7 @@ export async function startScanner(video, onCode) {
         ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A,
         ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.ITF,
       ]]]);
-      const reader = new ZXing.BrowserMultiFormatReader(hints, 150);
+      const reader = new ZXing.BrowserMultiFormatReader(hints, SCAN_INTERVAL_MS);
       reader.decodeFromStream(stream, video, (result) => {
         if (result && !stopped) onCode(result.getText());
       });

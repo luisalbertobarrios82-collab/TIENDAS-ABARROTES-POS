@@ -8,6 +8,7 @@ import { money, setHTML, showError } from '../ui.js';
 import { handleTicketClick, ticketLines } from './sell.js';
 
 const REPEAT_MS = 1500;
+const IDLE_MS = 60000;
 
 export function renderScan(root) {
   pruneCart();
@@ -15,6 +16,7 @@ export function renderScan(root) {
   let leaving = false;
   let last = { code: '', at: 0 };
   let pillTimer;
+  let idleTimer;
 
   setHTML(root, html`
     <div class="scan">
@@ -29,6 +31,7 @@ export function renderScan(root) {
         </header>
         <div class="frame"><i class="scan-line"></i></div>
         <p class="scan-hint" id="hint">Apunta a los productos uno tras otro</p>
+        <button type="button" class="resume-btn" id="resume" hidden>Toca para seguir escaneando</button>
         <form id="manual" class="manual" hidden>
           <input id="manual-code" inputmode="numeric" autocomplete="off" placeholder="Escribe el código" aria-label="Código de barras">
           <button class="btn btn-primary">Agregar</button>
@@ -100,28 +103,72 @@ export function renderScan(root) {
     if (code) handleCode(code);
   });
 
-  if (navigator.mediaDevices?.getUserMedia) {
-    startScanner(root.querySelector('#video'), handleCode).then((instance) => {
-      if (leaving) { instance.stop(); return; }
+  // La cámara se apaga al cambiar de app, al apagar la pantalla o tras un rato sin escanear.
+  const hint = root.querySelector('#hint');
+  const torchButton = root.querySelector('#torch');
+  const resumeButton = root.querySelector('#resume');
+  let wantCamera = false;
+
+  const showPaused = (paused) => {
+    root.querySelector('.scan').classList.toggle('is-paused', paused);
+    resumeButton.hidden = !paused;
+    hint.textContent = paused ? 'Cámara en pausa para cuidar la batería' : 'Apunta a los productos uno tras otro';
+  };
+
+  const pauseCamera = () => {
+    clearTimeout(idleTimer);
+    wantCamera = false;
+    scanner?.stop();
+    scanner = null;
+    torchButton.hidden = true;
+    if (!leaving && manual.hidden) showPaused(true);
+  };
+
+  const armIdle = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(pauseCamera, IDLE_MS);
+  };
+
+  const startCamera = () => {
+    if (scanner || wantCamera) return;
+    wantCamera = true;
+    showPaused(false);
+    startScanner(root.querySelector('#video'), (code) => { armIdle(); handleCode(code); }).then((instance) => {
+      if (leaving || !wantCamera) { instance.stop(); return; }
       scanner = instance;
-      if (instance.torch) {
-        const button = root.querySelector('#torch');
-        button.hidden = false;
-        button.addEventListener('click', () => instance.torch().catch(showError));
-      }
+      torchButton.hidden = !instance.torch;
+      armIdle();
     }).catch(() => {
+      wantCamera = false;
       if (leaving) return;
-      root.querySelector('#hint').textContent = 'No se pudo usar la cámara. Revisa el permiso o escribe el código.';
+      resumeButton.hidden = true;
+      hint.textContent = 'No se pudo usar la cámara. Revisa el permiso o escribe el código.';
       manual.hidden = false;
     });
+  };
+
+  const onVisibility = () => {
+    if (document.hidden) pauseCamera();
+  };
+
+  torchButton.addEventListener('click', () => scanner?.torch?.().catch(showError));
+  resumeButton.addEventListener('click', startCamera);
+  document.addEventListener('visibilitychange', onVisibility);
+  window.addEventListener('pagehide', pauseCamera);
+
+  if (navigator.mediaDevices?.getUserMedia) {
+    startCamera();
   } else {
-    root.querySelector('#hint').textContent = 'La cámara necesita abrirse desde el enlace seguro (https).';
+    hint.textContent = 'La cámara necesita abrirse desde el enlace seguro (https).';
     manual.hidden = false;
   }
 
   return () => {
     leaving = true;
     clearTimeout(pillTimer);
+    clearTimeout(idleTimer);
+    document.removeEventListener('visibilitychange', onVisibility);
+    window.removeEventListener('pagehide', pauseCamera);
     stopCart();
     scanner?.stop();
   };
