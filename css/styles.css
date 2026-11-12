@@ -17,6 +17,8 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+/* Chrome en Android agranda letras por su cuenta en algunas cajas: se respeta el tamaño de la app. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.35 var(--font); -webkit-font-smoothing: antialiased; overflow: hidden; }
 h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -.4px; line-height: 1.1; }
 h2 { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
@@ -49,7 +51,7 @@ button { cursor: pointer; }
 body[data-view=escanear] .tabbar { display: none; }
 
 /* Controles */
-.btn { display: inline-flex; justify-content: center; align-items: center; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--surface); font-weight: 600; text-decoration: none; color: var(--blue); box-shadow: 0 1px 2px rgba(0, 0, 0, .06); cursor: pointer; }
+.btn { display: inline-flex; justify-content: center; align-items: center; text-align: center; line-height: 1.2; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--surface); font-weight: 600; text-decoration: none; color: var(--blue); box-shadow: 0 1px 2px rgba(0, 0, 0, .06); cursor: pointer; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn:active:not(:disabled) { opacity: .7; }
 .btn:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
@@ -180,7 +182,8 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; lin
 .row-btn[aria-pressed=true] { background: var(--blue-soft); }
 .more-rows > .row:first-child, .more-rows + .row { border-top: .5px solid var(--line); }
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Nombres largos: hasta dos renglones y luego "…", sin salirse del recuadro. */
+.row-title { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow-wrap: break-word; hyphens: auto; }
 .row-qty { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .row.between { justify-content: space-between; }
 .chevron { color: #C7C7CC; flex: none; }
@@ -190,7 +193,8 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; lin
 .inline-input { border: 0; background: transparent; text-align: right; color: var(--blue); width: 110px; height: 32px; font-size: 16px; font-variant-numeric: tabular-nums; }
 .inline-input.wide { flex: 1; min-width: 0; width: auto; color: var(--ink); }
 .inline-select { border: 0; background: transparent; text-align: right; color: var(--muted); max-width: 62%; height: 32px; font-size: 16px; }
-.two-btns > .btn { flex: 1; }
+/* Si los dos botones no caben lado a lado, cada uno baja a su propio renglón completo en vez de partir el texto. */
+.two-btns > .btn { flex: 1 1 auto; white-space: nowrap; }
 .two-btns.under { margin-top: 10px; }
 
 .stat-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }

@@ -14,6 +14,16 @@ function expiringIn(p) {
   return days !== null && days <= EXPIRY_WARNING_DAYS ? days : null;
 }
 
+// Ganancia y margen en dos renglones cortos: en pantallas angostas no le quitan espacio al nombre.
+function marginLines(p) {
+  const { profit, margin } = computeMargin(p.price, p.cost);
+  const cls = profit < 0 ? 'alert' : 'good';
+  return html`
+    <small class="${cls}">${profit < 0 ? '−' : '+'}${money(Math.abs(profit))}</small>
+    ${margin !== null && html`<small class="${cls}">margen ${formatPercent(margin)}</small>`}
+  `;
+}
+
 function statusOf(p) {
   const days = expiringIn(p);
   if (days !== null) {
@@ -224,7 +234,7 @@ function renderList(root) {
           <span class="row-main"><span class="row-title">${p.name}</span>${statusOf(p)}</span>
           <span class="row-end">
             <strong class="row-qty">${formatQty(p.stock)} ${p.unit === 'pza' ? 'pz' : p.unit}</strong>
-            ${p.cost > 0 && html`<small class="${p.price < p.cost ? 'alert' : 'good'}">${marginShort(p.price, p.cost)}</small>`}
+            ${p.cost > 0 && marginLines(p)}
           </span>
           ${chevron}
         </a>
@@ -434,8 +444,7 @@ export function renderProduct(root, id) {
         <div class="group">
           ${p.barcodes.map((b) => html`
             <div class="row">
-              <span class="row-main"><span class="row-title">${b.label || 'Código'}</span></span>
-              <span class="muted tabular">${formatCode(b.code)}</span>
+              <span class="row-main"><span class="row-title">${b.label || 'Código'}</span><small class="muted tabular">${formatCode(b.code)}</small></span>
               <button class="link link-danger" data-unlink="${b.code}" aria-label="Quitar código ${b.code}">Quitar</button>
             </div>
           `)}
