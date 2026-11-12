@@ -184,24 +184,40 @@ function localDayKey(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// Cada venta se reparte en costo + IVA + ganancia, por día y por hora local.
 export function aggregateSales(sales) {
   const active = sales.filter((s) => s.status !== 'cancelled');
   const byMethod = { cash: 0, card: 0, transfer: 0, credit: 0 };
   const byDay = {};
+  const byHour = {};
   const products = new Map();
   let total = 0;
   let tax = 0;
   let profit = 0;
+  let cost = 0;
+  const bucket = (store, key) => {
+    store[key] ||= { total: 0, cost: 0, tax: 0, profit: 0 };
+    return store[key];
+  };
 
   for (const sale of active) {
     total += sale.total;
     tax += sale.tax;
     byMethod[sale.method] = (byMethod[sale.method] || 0) + sale.total;
-    const day = localDayKey(sale.date);
-    byDay[day] = (byDay[day] || 0) + sale.total;
+    const day = bucket(byDay, localDayKey(sale.date));
+    const hour = bucket(byHour, new Date(sale.date).getHours());
+    for (const target of [day, hour]) {
+      target.total += sale.total;
+      target.tax += sale.tax;
+    }
     for (const line of sale.lines) {
       const lineCost = Math.round(line.qty * (line.cost || 0));
       profit += line.net - lineCost;
+      cost += lineCost;
+      for (const target of [day, hour]) {
+        target.cost += lineCost;
+        target.profit += line.net - lineCost;
+      }
       const key = line.productId || line.name;
       const row = products.get(key) || { name: line.name, unit: line.unit, qty: 0, total: 0 };
       row.qty = roundQty(row.qty + line.qty);
@@ -214,11 +230,15 @@ export function aggregateSales(sales) {
     total,
     tax,
     profit,
+    cost,
+    // Margen sobre lo vendido sin IVA, porque el IVA no es dinero de la tienda.
+    margin: total - tax > 0 ? Math.round((profit / (total - tax)) * 1000) / 10 : null,
     tickets: active.length,
     average: active.length ? Math.round(total / active.length) : 0,
     cancelled: sales.length - active.length,
     byMethod,
     byDay,
+    byHour,
     topProducts: [...products.values()].sort((a, b) => b.total - a.total),
   };
 }

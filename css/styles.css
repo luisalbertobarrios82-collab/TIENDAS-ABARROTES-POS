@@ -258,7 +258,20 @@ body[data-view=escanear] .tabbar { display: none; }
 .bar-track { flex: 1; display: flex; align-items: flex-end; justify-content: center; border-bottom: .5px solid #C7C7CC; }
 .bar { width: 100%; max-width: 32px; background: var(--blue); border-radius: 4px 4px 0 0; }
 .bar-label { height: 20px; padding-top: 4px; font-size: 11px; color: var(--muted); white-space: nowrap; text-align: center; }
-.bar-col:hover::after, .bar-col:focus::after { content: attr(data-tip); position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 4px 8px; border-radius: 8px; font-size: 12px; white-space: nowrap; z-index: 2; pointer-events: none; }
+.bar-col:hover::after, .bar-col:focus::after { content: attr(data-tip); position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 4px 8px; border-radius: 8px; font-size: 12px; white-space: pre; line-height: 1.45; z-index: 2; pointer-events: none; }
+.bars.stacked { height: 200px; }
+.bar-stack { width: 100%; max-width: 32px; display: flex; flex-direction: column-reverse; gap: 2px; }
+.bar-stack i { display: block; min-height: 2px; }
+.bar-stack i:last-child { border-radius: 4px 4px 0 0; }
+.seg-cost { background: #FF9500; }
+.seg-tax { background: #30B0C7; }
+.seg-profit { background: #0071E3; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-bottom: 14px; }
+.chart-legend > div { display: flex; flex-direction: column; }
+.chart-legend span { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.chart-legend strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.export-link { align-self: flex-end; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: #0066CC; font-weight: 600; }
 .bar-col:first-child:hover::after, .bar-col:first-child:focus::after { left: 0; transform: none; }
 .bar-col:last-child:hover::after, .bar-col:last-child:focus::after { left: auto; right: 0; transform: none; }
 .chart-table { margin-top: 10px; }

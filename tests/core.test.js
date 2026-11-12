@@ -1,4 +1,5 @@
 import { PRODUCT_NAME_SUGGESTIONS, searchProductNames } from '../js/product-names.js';
+import { buildXlsx, columnName, crc32 } from '../js/xlsx.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -212,6 +213,37 @@ test('la búsqueda de nombres ignora acentos y prioriza el inicio', () => {
   assert.deepEqual(searchProductNames('a'), []);
   assert.equal(searchProductNames('leche', 3).length, 3);
   assert.deepEqual(searchProductNames('zzzz'), []);
+});
+
+test('los reportes separan ventas en costo, IVA y ganancia por día y hora', () => {
+  const date = new Date(2026, 10, 9, 14, 30).toISOString();
+  const report = aggregateSales([{
+    date, method: 'cash', total: 11600, tax: 1600, status: 'completed',
+    lines: [{ productId: 'a', name: 'A', qty: 2, cost: 3000, net: 10000, total: 11600 }],
+  }]);
+  assert.deepEqual(report.byDay['2026-11-09'], { total: 11600, cost: 6000, tax: 1600, profit: 4000 });
+  assert.deepEqual(report.byHour[14], { total: 11600, cost: 6000, tax: 1600, profit: 4000 });
+  assert.equal(report.cost, 6000);
+  assert.equal(report.margin, 40);
+  assert.equal(aggregateSales([]).margin, null);
+});
+
+test('el archivo de Excel es un ZIP válido con texto escapado', () => {
+  assert.equal(crc32(new TextEncoder().encode('hello')), 0x3610a686);
+  assert.equal(columnName(0), 'A');
+  assert.equal(columnName(25), 'Z');
+  assert.equal(columnName(26), 'AA');
+  const bytes = buildXlsx({
+    sheetName: 'Inventario',
+    columns: [{ header: 'Producto', type: 'text' }, { header: 'Precio', type: 'money' }],
+    rows: [['Jamón <b>&', 12.5], ['=SUMA(A1)', null]],
+    totals: ['Total', 12.5],
+  });
+  assert.equal(String.fromCharCode(bytes[0], bytes[1]), 'PK');
+  const text = new TextDecoder().decode(bytes);
+  assert.match(text, /Jamón &lt;b&gt;&amp;/);
+  assert.match(text, /t="inlineStr"><is><t xml:space="preserve">=SUMA\(A1\)/);
+  assert.doesNotMatch(text, /<f>/);
 });
 
 test('html escapa valores y conserva fragmentos anidados', () => {

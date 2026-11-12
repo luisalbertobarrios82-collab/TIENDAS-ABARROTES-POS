@@ -3,7 +3,8 @@ import { adjustStock, deleteProduct, getMovements, linkCode, saveProduct, state,
 import { lookupProduct } from '../catalog.js';
 import { bindNameSuggest, nameSuggestHtml } from '../name-suggest.js';
 import { bindPhotoPicker, fileToPhoto, photoPickerHtml } from '../photo.js';
-import { backLink, bindCategoryField, bindMargin, bindPackCost, catalogCard, categoryFieldHtml, packFieldsHtml, readCategory, chevron, confirmDialog, dateTime, isView, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
+import { buildXlsx, XLSX_MIME } from '../xlsx.js';
+import { backLink, bindCategoryField, bindMargin, bindPackCost, catalogCard, categoryFieldHtml, packFieldsHtml, readCategory, chevron, confirmDialog, dateTime, download, isView, localDate, marginShort, money, onSubmit, openModal, setHTML, showError, thumb, toast } from '../ui.js';
 
 const filter = { text: '', kind: 'all' };
 
@@ -139,6 +140,48 @@ function productSheet(existing, onSaved) {
   });
 }
 
+// ---------- Exportar a Excel ----------
+const INVENTORY_COLUMNS = [
+  { header: 'Códigos de barras', width: 22, type: 'text' },
+  { header: 'Producto', width: 34, type: 'text' },
+  { header: 'Categoría', width: 20, type: 'text' },
+  { header: 'Se vende por', width: 12, type: 'text' },
+  { header: 'Existencias', width: 12, type: 'qty' },
+  { header: 'Precio', width: 12, type: 'money' },
+  { header: 'Costo', width: 12, type: 'money' },
+  { header: 'Ganancia por unidad', width: 18, type: 'money' },
+  { header: 'Margen', width: 10, type: 'percent' },
+  { header: 'Valor a costo', width: 15, type: 'money' },
+  { header: 'Valor a precio de venta', width: 21, type: 'money' },
+  { header: 'Avisar cuando queden', width: 19, type: 'qty' },
+  { header: 'Piezas por caja', width: 14, type: 'qty' },
+  { header: 'Caducidad', width: 12, type: 'text' },
+  { header: 'IVA', width: 8, type: 'percent' },
+];
+
+export function inventoryWorkbook(products) {
+  let atCost = 0;
+  let atPrice = 0;
+  const rows = products.map((p) => {
+    const { profit, margin } = computeMargin(p.price, p.cost);
+    const stock = Math.max(p.stock, 0);
+    const valueAtCost = Math.round(stock * p.cost);
+    const valueAtPrice = Math.round(stock * p.price);
+    atCost += valueAtCost;
+    atPrice += valueAtPrice;
+    return [
+      p.barcodes.map((b) => b.code).join(' | '), p.name, p.category, p.unit, p.stock,
+      p.price / 100, p.cost / 100, p.cost > 0 ? profit / 100 : null, margin === null ? null : margin / 100,
+      valueAtCost / 100, valueAtPrice / 100, p.minStock, p.packUnits || null, p.expiry || '', p.taxRate / 100,
+    ];
+  });
+  const totals = INVENTORY_COLUMNS.map(() => null);
+  totals[1] = `Total · ${products.length} productos`;
+  totals[9] = atCost / 100;
+  totals[10] = atPrice / 100;
+  return buildXlsx({ sheetName: 'Inventario', columns: INVENTORY_COLUMNS, rows, totals });
+}
+
 // ---------- Lista ----------
 function renderList(root) {
   const words = normalize(filter.text).split(/\s+/).filter(Boolean);
@@ -190,12 +233,24 @@ export function renderInventory(root) {
         ${stat('low', 'si-red', '↓', low, 'Se acaban')}
         ${stat('expiring', 'si-orange', '!', expiring, 'Caducan')}
       </div>
+      <button type="button" class="link export-link" id="export-xlsx">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>
+        Exportar inventario a Excel
+      </button>
       <div id="list"></div>
     </div>
   `);
   renderList(root);
   root.querySelector('#filter').addEventListener('input', (e) => { filter.text = e.target.value; renderList(root); });
   root.querySelector('#new').addEventListener('click', () => productSheet(null, (id) => { location.hash = `#producto/${id}`; }));
+  root.querySelector('#export-xlsx').addEventListener('click', () => {
+    if (!state.products.length) {
+      toast('Todavía no hay productos para exportar.', 'error');
+      return;
+    }
+    download(`inventario-${localDate()}.xlsx`, inventoryWorkbook(state.products), XLSX_MIME);
+    toast('Inventario descargado');
+  });
   root.querySelector('#stats').addEventListener('click', (event) => {
     const button = event.target.closest('[data-kind]');
     if (!button) return;
